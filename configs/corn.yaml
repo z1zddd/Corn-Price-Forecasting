@@ -4,9 +4,9 @@ commodity:
   frequency: monthly
 
 data:
-  csv_path: examples/corn/sample_data.csv
-  date_col: date
-  price_col: close
+  csv_path: datasets/玉米价格月度_混合特征无缺失值双头LSTM版.csv
+  date_col: month
+  price_col: dce_corn_close
   feature_cols: auto_numeric
   encoding:
     - utf-8
@@ -16,6 +16,9 @@ data:
     - target_price_fwd
     - target_return_fwd
     - target_direction_fwd
+    - dce_corn_close_next_month
+    - dce_corn_close_next_month_ret
+    - spike
 
 target:
   horizon: 1
