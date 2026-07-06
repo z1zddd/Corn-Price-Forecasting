@@ -1,22 +1,21 @@
-# Commodity Backtest
+# 玉米价格预测回测框架
 
-Commodity Backtest is a YAML-driven, multi-commodity time-series forecasting backtest framework.
-It was organized from the corn benchmark exploration code into a reusable project that can run corn first and then switch to other commodities by changing configuration.
+本项目是一个由 YAML 配置驱动的多商品时间序列预测回测框架。它由玉米价格基准实验代码整理而来，默认先支持玉米价格预测，也可以通过更换配置扩展到大豆、螺纹钢等其他商品。
 
-The framework loads a commodity CSV, derives forward targets from the configured price column, builds chronological windows, runs enabled models, evaluates both forecasting and trading metrics, and writes reports that are readable by people and automation.
+框架会读取商品 CSV 数据，根据配置中的价格列生成未来收益和涨跌方向目标，按时间顺序构造窗口，运行启用的模型，评估预测指标和交易指标，并输出适合人工阅读和自动化流程使用的实验报告。
 
-## What It Does
+## 主要功能
 
-- Supports commodity-specific YAML configs.
-- Keeps time-series order intact; no shuffled train/test split.
-- Generates targets from `price_col` instead of trusting prebuilt labels.
-- Supports expanding, rolling, and capped expanding backtest windows.
-- Fits scalers only on each rolling window's training slice and can carve a validation tail from that slice.
-- Includes baselines, scikit-learn models, benchmark loss variants, and optional PyTorch sequence models.
-- Writes `comparison.csv`, `report.md`, `agent_verdict.json`, per-model predictions, metrics, equity charts, `rolling_dir_acc.png`, and `rolling_sharpe.png`.
-- Includes tests for config validation, data processing, split modes, models, metrics, reports, CLI commands, and repository boundaries.
+- 支持按商品维护独立的 YAML 配置。
+- 保持时间序列顺序，不使用随机打乱的训练/测试切分。
+- 从 `price_col` 自动生成目标变量，不依赖预先写好的标签。
+- 支持 expanding、rolling、capped expanding 三类回测窗口。
+- 标准化器只在每个 rolling 窗口的训练集上 `fit`，并可从训练集尾部切出验证集。
+- 内置基线模型、scikit-learn 模型、基准损失变体，并支持可选 PyTorch 序列模型。
+- 输出 `comparison.csv`、`report.md`、`agent_verdict.json`、各模型预测结果、指标、权益曲线图、`rolling_dir_acc.png` 和 `rolling_sharpe.png`。
+- 包含配置校验、数据处理、切分模式、模型、指标、报告、CLI 命令和仓库边界测试。
 
-## Install
+## 安装
 
 ```bash
 python -m venv .venv
@@ -24,9 +23,9 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -e .[dev]
 ```
 
-On macOS or Linux, use `.venv/bin/python` instead of `.venv\Scripts\python`.
+如果使用 macOS 或 Linux，请把 `.venv\Scripts\python` 换成 `.venv/bin/python`。
 
-## Quickstart
+## 快速开始
 
 ```bash
 commodity-backtest diagnose --csv examples/corn/sample_data.csv --date-col date
@@ -39,11 +38,11 @@ commodity-backtest compare --experiment experiments/manual_run
 commodity-backtest interpret --experiment experiments/manual_run
 ```
 
-The default run writes outputs under `experiments/manual_run/`, which is intentionally ignored by git.
+默认运行结果会写入 `experiments/manual_run/`。该目录已被 git 忽略，用于避免把本地实验产物提交到仓库。
 
-## Output Layout
+## 输出结构
 
-After `commodity-backtest run --config configs/corn.yaml`, the experiment directory contains:
+执行 `commodity-backtest run --config configs/corn.yaml` 后，实验目录大致如下：
 
 ```text
 experiments/manual_run/
@@ -61,19 +60,19 @@ experiments/manual_run/
       rolling_sharpe.png
 ```
 
-Each enabled model writes its own `model_outputs/<model>/` directory. The equity chart includes both strategy and buy-and-hold curves.
+每个启用的模型都会写入自己的 `model_outputs/<model>/` 子目录。权益曲线图同时包含策略曲线和买入持有曲线。
 
-## Switch To Another Commodity
+## 切换到其他商品
 
-1. Put the new CSV under `data/raw/` or another local path. `data/raw/` is ignored by git.
-2. Copy `configs/template.yaml`, or start from `configs/soybean.yaml` / `configs/rebar.yaml`.
-3. Update `commodity.name`, `data.csv_path`, `data.date_col`, `data.price_col`, and feature settings.
-4. Run `commodity-backtest diagnose --csv <path> --date-col <date_col>`.
-5. Run `commodity-backtest run --config configs/soybean.yaml`.
+1. 将新的 CSV 放到 `data/raw/` 或其他本地路径。`data/raw/` 默认被 git 忽略。
+2. 复制 `configs/template.yaml`，也可以从 `configs/soybean.yaml` 或 `configs/rebar.yaml` 开始修改。
+3. 更新 `commodity.name`、`data.csv_path`、`data.date_col`、`data.price_col` 和特征设置。
+4. 运行 `commodity-backtest diagnose --csv <path> --date-col <date_col>` 检查数据。
+5. 运行 `commodity-backtest run --config configs/soybean.yaml` 启动回测。
 
-## Models
+## 模型
 
-Built-in runnable models:
+内置可直接运行的模型：
 
 - `last_return`
 - `mean_return` / `mean_direction`
@@ -84,13 +83,13 @@ Built-in runnable models:
 - `regression_huber_sign`
 - `dual_head_mse_bce`
 
-Optional tree models are available when their dependencies are installed:
+安装对应依赖后可使用的树模型：
 
 - `lightgbm`
 - `xgboost`
 - `catboost`
 
-Optional PyTorch models are available when the `deep` extra is installed:
+安装 `deep` 可选依赖后可使用的 PyTorch 模型：
 
 - `focal_logistic`
 - `lstm`
@@ -100,37 +99,37 @@ Optional PyTorch models are available when the `deep` extra is installed:
 - `itransformer`
 - `dlinear`
 
-Install optional tree dependencies with either spelling:
+安装可选树模型依赖，可使用任一写法：
 
 ```bash
 pip install -e .[trees]
 pip install -e .[tree]
 ```
 
-Install optional deep dependencies with:
+安装可选深度学习依赖：
 
 ```bash
 pip install -e .[deep]
 ```
 
-## Design Rules
+## 设计约束
 
-- Never shuffle time-series data.
-- Generate targets from the configured price column.
-- Keep raw data, experiment outputs, model weights, and compressed artifacts out of git.
-- Treat backtest results as research evidence, not live trading promises.
+- 不打乱时间序列数据。
+- 目标变量必须从配置指定的价格列生成。
+- 原始数据、实验输出、模型权重和压缩包不进入 git。
+- 回测结果只能作为研究证据，不能被表述为实盘收益承诺。
 
-## Documentation
+## 文档
 
-- [Architecture](docs/architecture.md)
-- [Configuration](docs/configuration.md)
-- [Metrics](docs/metrics.md)
-- [Agent Workflow](docs/agent-workflow.md)
+- [架构说明](docs/architecture.md)
+- [配置说明](docs/configuration.md)
+- [指标说明](docs/metrics.md)
+- [Agent 工作流](docs/agent-workflow.md)
 
-## Test
+## 测试
 
 ```bash
 python -m pytest -v
 ```
 
-GitHub Actions is configured in `.github/workflows/tests.yml` to run the same test suite on push and pull request.
+GitHub Actions 已在 `.github/workflows/tests.yml` 中配置，会在 push 和 pull request 时运行同一套测试。
