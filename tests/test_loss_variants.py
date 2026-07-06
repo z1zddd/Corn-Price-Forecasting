@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 import yaml
 
 from commodity_backtest.backtest.engine import run_backtest
@@ -52,6 +53,7 @@ def test_dual_head_mse_bce_combines_classifier_and_return_regressor():
 
 
 def test_focal_logistic_model_predicts_probabilities():
+    pytest.importorskip("torch")
     x, y_class, _ = small_windows()
     model = create_model({"name": "focal_logistic", "params": {"epochs": 3, "lr": 0.05, "random_state": 42}})
 
