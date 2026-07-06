@@ -8,20 +8,26 @@ from commodity_backtest.data.loader import load_commodity_csv
 from commodity_backtest.models.sklearn_models import SklearnClassifierAdapter
 
 
+def _gbk_text(raw: bytes) -> str:
+    return raw.decode("gbk")
+
+
 def test_gbk_csv_can_be_loaded(tmp_path: Path):
-    path = tmp_path / "?? ??.csv"
+    date_col = _gbk_text(b"\xc8\xd5\xc6\xda")
+    price_col = _gbk_text(b"\xca\xd5\xc5\xcc\xbc\xdb")
+    path = tmp_path / _gbk_text(b"\xd3\xf1\xc3\xd7 \xca\xfd\xbe\xdd.csv")
     df = pd.DataFrame(
         {
-            "??": pd.date_range("2020-01-01", periods=3, freq="MS").strftime("%Y-%m-%d"),
-            "???": [100, 101, 102],
+            date_col: pd.date_range("2020-01-01", periods=3, freq="MS").strftime("%Y-%m-%d"),
+            price_col: [100, 101, 102],
         }
     )
     df.to_csv(path, index=False, encoding="gbk")
 
-    loaded, encoding = load_commodity_csv(path, date_col="??", encodings=["utf-8", "gbk"])
+    loaded, encoding = load_commodity_csv(path, date_col=date_col, encodings=["utf-8", "gbk"])
 
     assert encoding == "gbk"
-    assert loaded["???"].tolist() == [100, 101, 102]
+    assert loaded[price_col].tolist() == [100, 101, 102]
 
 
 def test_diagnosis_reports_price_candidates():
