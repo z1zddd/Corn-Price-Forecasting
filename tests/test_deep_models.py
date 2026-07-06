@@ -3,7 +3,7 @@ import pytest
 
 pytest.importorskip("torch")
 
-from commodity_backtest.models.registry import create_model
+from models.registry import create_model
 
 
 DEEP_MODEL_NAMES = ["lstm", "gru", "transformer", "patchtst", "itransformer", "dlinear"]

@@ -4,7 +4,7 @@ commodity:
   frequency: monthly
 
 data:
-  csv_path: data/raw/soybean.csv
+  csv_path: local_data/soybean.csv
   date_col: date
   price_col: close
   feature_cols: auto_numeric

@@ -170,4 +170,4 @@ Keep deep models disabled in default commodity configs unless the target environ
 
 Use `commodity-backtest auto-window --config configs/corn.yaml` to recommend `lookback` and `train_window` settings from the CSV row count.
 
-Use `commodity-backtest build-config --base-config configs/template.yaml --output configs/my_commodity.yaml --commodity-name my_commodity --csv data/raw/my.csv --date-col date --price-col close` to create a new commodity YAML from an existing template.
+Use `commodity-backtest build-config --base-config configs/template.yaml --output configs/my_commodity.yaml --commodity-name my_commodity --csv local_data/my.csv --date-col date --price-col close` to create a new commodity YAML from an existing template.

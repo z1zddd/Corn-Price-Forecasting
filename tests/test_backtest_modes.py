@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from commodity_backtest.backtest.splits import assert_temporal_holdout, make_backtest_windows
+from backtest.splits import assert_temporal_holdout, make_backtest_windows
 
 
 def test_expanding_windows():

@@ -3,9 +3,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from commodity_backtest.data.diagnosis import diagnose_frame
-from commodity_backtest.data.loader import load_commodity_csv
-from commodity_backtest.models.sklearn_models import SklearnClassifierAdapter
+from data.diagnosis import diagnose_frame
+from data.loader import load_commodity_csv
+from models.sklearn_models import SklearnClassifierAdapter
 
 
 def _gbk_text(raw: bytes) -> str:

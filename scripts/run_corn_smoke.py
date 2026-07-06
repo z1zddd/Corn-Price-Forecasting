@@ -7,10 +7,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT))
 
-from commodity_backtest.backtest.engine import run_backtest
-from commodity_backtest.config.loader import load_config
+from backtest.engine import run_backtest
+from config.loader import load_config
 
 
 def main() -> None:

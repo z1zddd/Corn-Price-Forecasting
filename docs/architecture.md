@@ -17,7 +17,7 @@ YAML config
 ## Package Layout
 
 ```text
-src/commodity_backtest/
+
   config/
     loader.py       load YAML files
     schema.py       validate required fields and temporal constraints

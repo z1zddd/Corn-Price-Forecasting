@@ -37,11 +37,16 @@ dev = [
 ]
 
 [project.scripts]
-commodity-backtest = "commodity_backtest.cli:main"
+commodity-backtest = "cli:main"
+
+[tool.setuptools]
+py-modules = ["cli"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["backtest*", "config*", "data*", "eval*", "models*", "report*", "train*"]
+exclude = ["tests*", "docs*", "examples*", "configs*", "scripts*", "experiments*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["."]

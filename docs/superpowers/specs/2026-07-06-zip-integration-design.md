@@ -66,7 +66,7 @@ Tests must cover:
 The integration is accepted when:
 
 - `python -m pytest -v` passes.
-- `commodity_backtest.cli diagnose --config configs/corn.yaml` runs.
-- `commodity_backtest.cli run --config configs/corn.yaml` runs and writes all output files.
-- `commodity_backtest.cli run-lookbacks --config configs/corn.yaml` runs.
+- `cli diagnose --config configs/corn.yaml` runs.
+- `cli run --config configs/corn.yaml` runs and writes all output files.
+- `cli run-lookbacks --config configs/corn.yaml` runs.
 - `git status --short` is clean after committing.

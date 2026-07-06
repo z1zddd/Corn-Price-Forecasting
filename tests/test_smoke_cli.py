@@ -7,14 +7,14 @@ from pathlib import Path
 
 def subprocess_env(tmp_path: Path) -> dict[str, str]:
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(Path("src").resolve())
+    env["PYTHONPATH"] = str(Path(".").resolve())
     env["MPLCONFIGDIR"] = str(tmp_path / "matplotlib")
     return env
 
 
 def test_cli_diagnose_runs(tmp_path: Path):
     result = subprocess.run(
-        [sys.executable, "-m", "commodity_backtest.cli", "diagnose", "--csv", "examples/corn/sample_data.csv", "--date-col", "date"],
+        [sys.executable, "-m", "cli", "diagnose", "--csv", "examples/corn/sample_data.csv", "--date-col", "date"],
         check=True,
         capture_output=True,
         env=subprocess_env(tmp_path),
@@ -27,7 +27,7 @@ def test_cli_diagnose_runs(tmp_path: Path):
 
 def test_cli_diagnose_runs_from_config(tmp_path: Path):
     result = subprocess.run(
-        [sys.executable, "-m", "commodity_backtest.cli", "diagnose", "--config", "configs/corn.yaml"],
+        [sys.executable, "-m", "cli", "diagnose", "--config", "configs/corn.yaml"],
         check=True,
         capture_output=True,
         env=subprocess_env(tmp_path),
@@ -45,7 +45,7 @@ def test_cli_run_writes_outputs(tmp_path: Path):
         [
             sys.executable,
             "-m",
-            "commodity_backtest.cli",
+            "cli",
             "run",
             "--config",
             "configs/corn.yaml",

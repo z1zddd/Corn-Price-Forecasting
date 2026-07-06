@@ -4,8 +4,11 @@ __pycache__/
 .mplconfig/
 .mypy_cache/
 .ruff_cache/
+*.egg-info/
+build/
 .venv/
 .venv*/
+local_data/
 experiments/
 outputs/
 *_outputs/

@@ -13,8 +13,8 @@
 ### Task 1: Model Registry Extensions
 
 **Files:**
-- Modify: `src/commodity_backtest/models/sklearn_models.py`
-- Modify: `src/commodity_backtest/models/registry.py`
+- Modify: `models/sklearn_models.py`
+- Modify: `models/registry.py`
 - Test: `tests/test_models.py`
 
 - [ ] Write tests for logistic regression, string config compatibility, and optional tree dependency errors.
@@ -27,8 +27,8 @@
 ### Task 2: Per-Model Report Outputs
 
 **Files:**
-- Modify: `src/commodity_backtest/report/writer.py`
-- Modify: `src/commodity_backtest/backtest/engine.py`
+- Modify: `report/writer.py`
+- Modify: `backtest/engine.py`
 - Test: `tests/test_report_outputs.py`
 - Test: `tests/test_smoke_cli.py`
 
@@ -42,8 +42,8 @@
 ### Task 3: Config And CLI Compatibility
 
 **Files:**
-- Modify: `src/commodity_backtest/cli.py`
-- Modify: `src/commodity_backtest/config/schema.py`
+- Modify: `cli.py`
+- Modify: `config/schema.py`
 - Create: `configs/soybean.yaml`
 - Create: `configs/rebar.yaml`
 - Test: `tests/test_config_examples.py`
@@ -81,9 +81,9 @@
 - No source edits unless verification finds a real bug.
 
 - [ ] Run `python -m pytest -v`.
-- [ ] Run `python -m commodity_backtest.cli diagnose --config configs/corn.yaml`.
-- [ ] Run `python -m commodity_backtest.cli run --config configs/corn.yaml --output-dir experiments/integration_verify`.
-- [ ] Run `python -m commodity_backtest.cli run-lookbacks --config configs/corn.yaml --output-dir experiments/integration_lookbacks`.
+- [ ] Run `python -m cli diagnose --config configs/corn.yaml`.
+- [ ] Run `python -m cli run --config configs/corn.yaml --output-dir experiments/integration_verify`.
+- [ ] Run `python -m cli run-lookbacks --config configs/corn.yaml --output-dir experiments/integration_lookbacks`.
 - [ ] Verify expected output files exist.
 - [ ] Run `git status --short`.
 - [ ] Commit any verification fixes with a focused message.

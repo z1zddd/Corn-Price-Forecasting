@@ -4,8 +4,8 @@ import pandas as pd
 import pytest
 import yaml
 
-from commodity_backtest.backtest.engine import run_backtest
-from commodity_backtest.data.scaler import SequenceStandardizer
+from backtest.engine import run_backtest
+from data.scaler import SequenceStandardizer
 
 
 def test_sequence_standardizer_fits_train_only_statistics():

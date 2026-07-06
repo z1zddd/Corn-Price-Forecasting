@@ -42,7 +42,7 @@ The verdict includes:
 
 ```bash
 commodity-backtest diagnose --csv examples/corn/sample_data.csv --date-col date
-commodity-backtest build-config --base-config configs/template.yaml --output configs/my_commodity.yaml --commodity-name my_commodity --csv data/raw/my.csv --date-col date --price-col close
+commodity-backtest build-config --base-config configs/template.yaml --output configs/my_commodity.yaml --commodity-name my_commodity --csv local_data/my.csv --date-col date --price-col close
 commodity-backtest auto-window --config configs/corn.yaml
 commodity-backtest run --config configs/corn.yaml
 commodity-backtest run-lookbacks --config configs/corn.yaml

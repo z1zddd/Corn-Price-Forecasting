@@ -1,6 +1,6 @@
 import numpy as np
 
-from commodity_backtest.eval.metrics import compute_all_metrics, compute_bootstrap_ci
+from eval.metrics import compute_all_metrics, compute_bootstrap_ci
 
 
 def test_compute_all_metrics_contains_required_keys():

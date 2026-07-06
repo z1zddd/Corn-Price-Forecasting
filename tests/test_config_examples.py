@@ -2,14 +2,14 @@ from pathlib import Path
 
 import pytest
 
-from commodity_backtest.config.loader import load_config
-from commodity_backtest.config.schema import validate_config
+from config.loader import load_config
+from config.schema import validate_config
 
 
-def test_package_imports():
-    import commodity_backtest
+def test_cli_imports():
+    import cli
 
-    assert commodity_backtest.__version__ == "0.1.0"
+    assert callable(cli.main)
 
 
 def test_template_config_loads():

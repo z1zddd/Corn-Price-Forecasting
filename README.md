@@ -31,7 +31,7 @@ python -m venv .venv
 commodity-backtest diagnose --csv examples/corn/sample_data.csv --date-col date
 commodity-backtest diagnose --config configs/corn.yaml
 commodity-backtest auto-window --config configs/corn.yaml
-commodity-backtest build-config --base-config configs/template.yaml --output configs/my_commodity.yaml --commodity-name my_commodity --csv data/raw/my.csv --date-col date --price-col close
+commodity-backtest build-config --base-config configs/template.yaml --output configs/my_commodity.yaml --commodity-name my_commodity --csv local_data/my.csv --date-col date --price-col close
 commodity-backtest run --config configs/corn.yaml
 commodity-backtest run-lookbacks --config configs/corn.yaml
 commodity-backtest compare --experiment experiments/manual_run
@@ -39,6 +39,23 @@ commodity-backtest interpret --experiment experiments/manual_run
 ```
 
 默认运行结果会写入 `experiments/manual_run/`。该目录已被 git 忽略，用于避免把本地实验产物提交到仓库。
+
+## 项目结构
+
+```text
+backtest/    时间序列回测窗口和实验执行
+config/      YAML 配置读取与校验
+data/        CSV 读取、目标生成、特征选择和窗口构造代码
+eval/        预测指标、交易指标和置信区间
+models/      基线模型、随机森林、损失变体和可选深度模型
+report/      报告、图表和结果判断
+train/       PyTorch 训练辅助代码
+cli.py       命令行入口
+configs/     示例配置
+examples/    示例数据
+local_data/  本地原始数据目录，默认不提交到 git
+tests/       自动化测试
+```
 
 ## 输出结构
 
@@ -64,7 +81,7 @@ experiments/manual_run/
 
 ## 切换到其他商品
 
-1. 将新的 CSV 放到 `data/raw/` 或其他本地路径。`data/raw/` 默认被 git 忽略。
+1. 将新的 CSV 放到 `local_data/` 或其他本地路径。`local_data/` 默认被 git 忽略，避免和代码模块 `data/` 混淆。
 2. 复制 `configs/template.yaml`，也可以从 `configs/soybean.yaml` 或 `configs/rebar.yaml` 开始修改。
 3. 更新 `commodity.name`、`data.csv_path`、`data.date_col`、`data.price_col` 和特征设置。
 4. 运行 `commodity-backtest diagnose --csv <path> --date-col <date_col>` 检查数据。

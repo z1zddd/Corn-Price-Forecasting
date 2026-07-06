@@ -5,8 +5,8 @@ import pandas as pd
 import pytest
 import yaml
 
-from commodity_backtest.backtest.engine import run_backtest
-from commodity_backtest.models.registry import create_model
+from backtest.engine import run_backtest
+from models.registry import create_model
 
 
 def small_windows():

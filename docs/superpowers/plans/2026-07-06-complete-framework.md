@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Finish the commodity backtest framework so it covers the runnable requirements from DESIGN.md, the reusable modules from `C:/????/src`, and the edge-case/metric behavior from `corn-benchmark-data-explore`.
+**Goal:** Finish the commodity backtest framework so it covers the runnable requirements from DESIGN.md, the reusable modules from `C:/时序玉米/src`, and the edge-case/metric behavior from `corn-benchmark-data-explore`.
 
 **Architecture:** Keep the current GitHub-ready framework as the core. Add missing capabilities as optional, tested modules: train-only scaling, train/val/test slicing, layer-2 loss models, PyTorch deep adapters, stricter diagnostics, and richer reports. Do not commit experiment outputs, raw data, model weights, or one-off artifacts.
 
@@ -13,9 +13,9 @@
 ### Task 1: Train-Only Scaling And Validation Slices
 
 **Files:**
-- Create: `src/commodity_backtest/data/scaler.py`
-- Modify: `src/commodity_backtest/backtest/engine.py`
-- Modify: `src/commodity_backtest/config/schema.py`
+- Create: `data/scaler.py`
+- Modify: `backtest/engine.py`
+- Modify: `config/schema.py`
 - Modify: `configs/template.yaml`
 - Modify: `configs/corn.yaml`
 - Modify: `configs/soybean.yaml`
@@ -33,9 +33,9 @@
 ### Task 2: Benchmark Layer-2 Models And Regression Health
 
 **Files:**
-- Create: `src/commodity_backtest/models/loss_variants.py`
-- Modify: `src/commodity_backtest/models/registry.py`
-- Modify: `src/commodity_backtest/eval/metrics.py`
+- Create: `models/loss_variants.py`
+- Modify: `models/registry.py`
+- Modify: `eval/metrics.py`
 - Test: `tests/test_loss_variants.py`
 - Test: `tests/test_metrics.py`
 
@@ -50,17 +50,17 @@
 ### Task 3: Optional Deep Sequence Models
 
 **Files:**
-- Create: `src/commodity_backtest/train/losses.py`
-- Create: `src/commodity_backtest/train/trainer.py`
-- Create: `src/commodity_backtest/models/deep/base.py`
-- Create: `src/commodity_backtest/models/deep/lstm.py`
-- Create: `src/commodity_backtest/models/deep/gru.py`
-- Create: `src/commodity_backtest/models/deep/transformer.py`
-- Create: `src/commodity_backtest/models/deep/patchtst.py`
-- Create: `src/commodity_backtest/models/deep/dlinear.py`
-- Create: `src/commodity_backtest/models/deep/itransformer.py`
-- Create: `src/commodity_backtest/models/deep/__init__.py`
-- Modify: `src/commodity_backtest/models/registry.py`
+- Create: `train/losses.py`
+- Create: `train/trainer.py`
+- Create: `models/deep/base.py`
+- Create: `models/deep/lstm.py`
+- Create: `models/deep/gru.py`
+- Create: `models/deep/transformer.py`
+- Create: `models/deep/patchtst.py`
+- Create: `models/deep/dlinear.py`
+- Create: `models/deep/itransformer.py`
+- Create: `models/deep/__init__.py`
+- Modify: `models/registry.py`
 - Test: `tests/test_deep_models.py`
 
 - [ ] Add tests that each deep model name can be created.
@@ -74,9 +74,9 @@
 ### Task 4: Richer Reports And Edge-Case Tests
 
 **Files:**
-- Modify: `src/commodity_backtest/report/writer.py`
-- Modify: `src/commodity_backtest/report/verdict.py`
-- Modify: `src/commodity_backtest/data/diagnosis.py`
+- Modify: `report/writer.py`
+- Modify: `report/verdict.py`
+- Modify: `data/diagnosis.py`
 - Test: `tests/test_report_outputs.py`
 - Test: `tests/test_edge_cases.py`
 
@@ -91,7 +91,7 @@
 ### Task 5: Agent Workflow And Final Documentation
 
 **Files:**
-- Modify: `src/commodity_backtest/cli.py`
+- Modify: `cli.py`
 - Modify: `docs/agent-workflow.md`
 - Modify: `docs/architecture.md`
 - Modify: `docs/configuration.md`
@@ -113,9 +113,9 @@
 - No source edits unless verification exposes a bug.
 
 - [ ] Run `python -m pytest -v`.
-- [ ] Run `python -m commodity_backtest.cli diagnose --config configs/corn.yaml`.
-- [ ] Run `python -m commodity_backtest.cli run --config configs/corn.yaml --output-dir experiments/complete_verify`.
-- [ ] Run `python -m commodity_backtest.cli run-lookbacks --config configs/corn.yaml --output-dir experiments/complete_lookbacks`.
+- [ ] Run `python -m cli diagnose --config configs/corn.yaml`.
+- [ ] Run `python -m cli run --config configs/corn.yaml --output-dir experiments/complete_verify`.
+- [ ] Run `python -m cli run-lookbacks --config configs/corn.yaml --output-dir experiments/complete_lookbacks`.
 - [ ] Run `python scripts/run_corn_smoke.py`.
 - [ ] Check that generated output contains `comparison.csv`, `report.md`, `agent_verdict.json`, per-model predictions, rolling metrics, equity curve, rolling DirAcc chart, and rolling Sharpe chart.
 - [ ] Run `git status --short`.

@@ -4,10 +4,10 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from commodity_backtest.backtest.engine import run_backtest
-from commodity_backtest.config.loader import load_config
-from commodity_backtest.report.verdict import build_agent_verdict
-from commodity_backtest.report.writer import write_experiment_report
+from backtest.engine import run_backtest
+from config.loader import load_config
+from report.verdict import build_agent_verdict
+from report.writer import write_experiment_report
 
 
 def test_agent_verdict_marks_invalid_constant_predictions():
