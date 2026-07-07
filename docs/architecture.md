@@ -68,7 +68,7 @@ YAML config
 - `sklearn_random_forest`
 - benchmark loss variants: `regression_mse_sign`, `regression_mae_sign`, `regression_huber_sign`, and `dual_head_mse_bce`
 - optional torch focal classifier: `focal_logistic`
-- optional torch sequence classifiers: `lstm`, `gru`, `transformer`, `patchtst`, `itransformer`, and `dlinear`
+- optional torch sequence classifiers: `lstm`, `gru`, `transformer`, `patchtst`, `itransformer`, `dlinear`, and `dual_stream_lstm`
 - optional `lightgbm`, `xgboost`, and `catboost`
 
 New models should be added behind `models/registry.py` so the CLI remains YAML-driven.

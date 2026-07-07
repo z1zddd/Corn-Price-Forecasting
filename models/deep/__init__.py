@@ -5,7 +5,7 @@ from __future__ import annotations
 from importlib import import_module
 
 
-DEEP_MODEL_NAMES = {"lstm", "gru", "transformer", "patchtst", "itransformer", "dlinear"}
+DEEP_MODEL_NAMES = {"lstm", "gru", "transformer", "patchtst", "itransformer", "dlinear", "dual_stream_lstm"}
 
 _FACTORIES = {
     "lstm": ("models.deep.lstm", "create_lstm"),
@@ -14,6 +14,7 @@ _FACTORIES = {
     "patchtst": ("models.deep.patchtst", "create_patchtst"),
     "itransformer": ("models.deep.itransformer", "create_itransformer"),
     "dlinear": ("models.deep.dlinear", "create_dlinear"),
+    "dual_stream_lstm": ("models.deep.dual_stream_lstm", "create_dual_stream_lstm"),
 }
 
 
@@ -30,4 +31,3 @@ def create_deep_model(name: str, params: dict):
             raise ImportError("torch is required for deep sequence models. Install with: pip install -e .[deep]") from exc
         raise
     return getattr(module, factory_name)(params)
-

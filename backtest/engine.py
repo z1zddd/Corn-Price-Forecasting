@@ -99,7 +99,12 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
             y_val = y[val_idx] if len(val_idx) else None
             x_test = scaler.transform_x(x[window.test_idx])
 
-            model = create_model(model_cfg)
+            run_model_cfg = dict(model_cfg)
+            if model_cfg.get("name") == "dual_stream_lstm" or model_cfg.get("type") == "dual_stream_lstm":
+                params = dict(run_model_cfg.get("params") or {})
+                params.setdefault("feature_cols", feature_cols)
+                run_model_cfg["params"] = params
+            model = create_model(run_model_cfg)
             if hasattr(model, "fit_with_targets"):
                 y_return_val = y_returns[val_idx] if len(val_idx) else None
                 model.fit_with_targets(x_train, y[train_idx], y_returns[train_idx], x_val, y_val, y_return_val)

@@ -30,7 +30,7 @@ def test_corn_config_validates():
 
 
 def test_additional_commodity_configs_validate():
-    for path in [Path("configs/soybean.yaml"), Path("configs/rebar.yaml")]:
+    for path in [Path("configs/soybean.yaml"), Path("configs/rebar.yaml"), Path("configs/corn_dual_stream_lstm.yaml")]:
         cfg = load_config(path)
         validate_config(cfg)
         assert cfg["data"]["feature_cols"] == "auto_numeric"

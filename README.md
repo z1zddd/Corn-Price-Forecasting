@@ -115,6 +115,7 @@ experiments/manual_run/
 - `patchtst`
 - `itransformer`
 - `dlinear`
+- `dual_stream_lstm`
 
 安装可选树模型依赖，可使用任一写法：
 
@@ -141,6 +142,7 @@ pip install -e .[deep]
 - [架构说明](docs/architecture.md)
 - [配置说明](docs/configuration.md)
 - [指标说明](docs/metrics.md)
+- [双头 LSTM 模型](docs/dual-stream-lstm.md)
 - [Agent 工作流](docs/agent-workflow.md)
 
 ## 测试

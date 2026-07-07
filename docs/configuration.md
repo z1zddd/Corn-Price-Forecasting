@@ -163,6 +163,9 @@ Optional PyTorch model names require installing the `deep` extra:
 - `patchtst`
 - `itransformer`
 - `dlinear`
+- `dual_stream_lstm`
+
+`dual_stream_lstm` uses all selected numeric features directly. Columns named like `pca_001` through `pca_032` are routed to the PCA/news branch, while the remaining numeric columns are routed to the structured branch. Use `configs/corn_dual_stream_lstm.yaml` for the corn dataset version that does not depend on random-forest feature ranking.
 
 Keep deep models disabled in default commodity configs unless the target environment has `torch` and enough rows for a meaningful rolling backtest.
 

@@ -40,6 +40,7 @@ MODEL_TYPE_ALIASES = {
     "patchtst": "patchtst",
     "itransformer": "itransformer",
     "dlinear": "dlinear",
+    "dual_stream_lstm": "dual_stream_lstm",
 }
 
 
