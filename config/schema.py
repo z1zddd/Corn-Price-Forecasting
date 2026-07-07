@@ -83,5 +83,13 @@ def validate_config(config: Mapping) -> None:
         raise ValueError("split.val_ratio must be >= 0 and < 0.5")
 
     models = config["models"]
-    if not isinstance(models, list) or not models:
-        raise ValueError("models must be a non-empty list")
+    if isinstance(models, str):
+        if models != "official_57":
+            raise ValueError("models string must be a known model pool such as official_57")
+    elif isinstance(models, dict):
+        if "pool" not in models:
+            raise ValueError("models mapping must contain a pool field")
+        if models["pool"] != "official_57":
+            raise ValueError("models.pool must be a known model pool such as official_57")
+    elif not isinstance(models, list) or not models:
+        raise ValueError("models must be a non-empty list, a known pool string, or a pool mapping")

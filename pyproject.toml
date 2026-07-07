@@ -32,6 +32,21 @@ tree = [
 deep = [
   "torch>=2.1",
 ]
+aeon = [
+  "aeon>=1.3,<2",
+]
+keras = [
+  "tensorflow>=2.15",
+  "keras-tcn>=3.5",
+]
+official-pool = [
+  "aeon>=1.3,<2",
+  "lightgbm>=4.0",
+  "xgboost>=2.0",
+  "catboost>=1.2",
+  "tensorflow>=2.15",
+  "keras-tcn>=3.5",
+]
 dev = [
   "pytest>=8.0",
 ]

@@ -15,7 +15,7 @@ from data.scaler import SequenceStandardizer
 from data.targets import add_forward_targets
 from data.windowing import make_windows
 from eval.metrics import compute_all_metrics
-from models.registry import create_model, normalize_model_config
+from models.registry import create_model, expand_model_configs, normalize_model_config
 from report.verdict import build_agent_verdict
 from report.writer import write_experiment_report, write_model_outputs
 
@@ -50,6 +50,7 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
         data_cfg["feature_cols"],
         date_col=data_cfg["date_col"],
         exclude_feature_cols=data_cfg.get("exclude_feature_cols", []),
+        exclude_feature_patterns=data_cfg.get("exclude_feature_patterns", []),
     )
     x, y, meta = make_windows(
         df,
@@ -79,7 +80,7 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
     first_model_metrics: dict | None = None
     baseline_metrics: dict | None = None
 
-    enabled_models = [normalize_model_config(model) for model in config["models"]]
+    enabled_models = [normalize_model_config(model) for model in expand_model_configs(config["models"])]
     for model_cfg in [model for model in enabled_models if model.get("enabled", True)]:
         model_name = model_cfg["name"]
         pred_probs: list[float] = []
@@ -223,6 +224,8 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
         "encoding": encoding,
         "rows_after_target": int(len(df)),
         "feature_cols": feature_cols,
+        "exclude_feature_cols": data_cfg.get("exclude_feature_cols", []),
+        "exclude_feature_patterns": data_cfg.get("exclude_feature_patterns", []),
         "windows": len(windows),
         "scaling": "train_only_sequence_standardizer",
         "target_known_only": bool(train_window.get("target_known_only", False)),

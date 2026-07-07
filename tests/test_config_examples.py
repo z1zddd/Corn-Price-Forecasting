@@ -30,7 +30,15 @@ def test_corn_config_validates():
 
 
 def test_additional_commodity_configs_validate():
-    for path in [Path("configs/soybean.yaml"), Path("configs/rebar.yaml"), Path("configs/corn_dual_stream_lstm.yaml")]:
+    for path in [
+        Path("configs/soybean.yaml"),
+        Path("configs/rebar.yaml"),
+        Path("configs/corn_dual_stream_lstm.yaml"),
+        Path("configs/corn_official_pool_57_h1_no_news.yaml"),
+        Path("configs/corn_official_pool_57_h2_no_news.yaml"),
+        Path("configs/corn_official_pool_57_h1_with_news.yaml"),
+        Path("configs/corn_official_pool_57_h2_with_news.yaml"),
+    ]:
         cfg = load_config(path)
         validate_config(cfg)
         assert cfg["data"]["feature_cols"] == "auto_numeric"

@@ -121,7 +121,7 @@ def test_dual_stream_lstm_without_pca_features_trains_as_structured_only():
 
 
 def test_backtest_passes_auto_numeric_feature_names_to_dual_stream_lstm(tmp_path):
-    dates = pd.date_range("2020-01-31", periods=12, freq="ME")
+    dates = pd.date_range("2020-01-31", periods=12, freq=pd.offsets.MonthEnd())
     frame = pd.DataFrame(
         {
             "date": dates,

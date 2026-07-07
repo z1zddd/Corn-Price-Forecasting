@@ -11,6 +11,7 @@ from models.loss_variants import (
     create_regression_mae_sign,
     create_regression_mse_sign,
 )
+from models.official_pool import create_official_pool_model, expand_model_pool
 from models.sklearn_models import (
     create_catboost,
     create_lightgbm,
@@ -29,6 +30,7 @@ MODEL_TYPE_ALIASES = {
     "lightgbm": "lightgbm",
     "xgboost": "xgboost",
     "catboost": "catboost",
+    "official_pool": "official_pool",
     "regression_mse_sign": "regression_mse_sign",
     "regression_mae_sign": "regression_mae_sign",
     "regression_huber_sign": "regression_huber_sign",
@@ -42,6 +44,25 @@ MODEL_TYPE_ALIASES = {
     "dlinear": "dlinear",
     "dual_stream_lstm": "dual_stream_lstm",
 }
+
+
+def expand_model_configs(models_config) -> list:
+    """Expand named model pools into explicit model configs."""
+
+    if isinstance(models_config, str):
+        return expand_model_pool(models_config)
+    if isinstance(models_config, dict) and "pool" in models_config:
+        pool_name = str(models_config["pool"])
+        expanded = expand_model_pool(pool_name)
+        disabled = set(models_config.get("disable", []) or [])
+        enabled_only = set(models_config.get("enable_only", []) or [])
+        for model in expanded:
+            if model["name"] in disabled:
+                model["enabled"] = False
+            if enabled_only:
+                model["enabled"] = model["name"] in enabled_only
+        return expanded
+    return list(models_config)
 
 
 def normalize_model_config(model_config: dict | str) -> dict:
@@ -82,6 +103,8 @@ def create_model(model_config: dict | str):
         return create_xgboost(params)
     if model_type == "catboost":
         return create_catboost(params)
+    if model_type == "official_pool":
+        return create_official_pool_model(str(config.get("name")), params)
     if model_type == "regression_mse_sign":
         return create_regression_mse_sign(params)
     if model_type == "regression_mae_sign":

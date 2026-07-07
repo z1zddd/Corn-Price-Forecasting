@@ -38,6 +38,28 @@ def test_auto_numeric_excludes_targets_and_date():
     assert cols == ["close", "volume"]
 
 
+def test_auto_numeric_exclude_patterns_remove_pca_news():
+    df = pd.DataFrame(
+        {
+            "date": pd.date_range("2020-01-01", periods=3, freq="MS"),
+            "close": [100.0, 101.0, 102.0],
+            "basis": [0.1, 0.2, 0.3],
+            "pca_001": [1.0, 0.0, 1.0],
+            "PCA002": [0.0, 1.0, 0.0],
+        }
+    )
+
+    cols = select_feature_columns(
+        df,
+        "auto_numeric",
+        date_col="date",
+        exclude_feature_cols=[],
+        exclude_feature_patterns=["pca_*", "PCA*"],
+    )
+
+    assert cols == ["close", "basis"]
+
+
 def test_make_windows_shape_and_meta():
     df = pd.DataFrame(
         {
