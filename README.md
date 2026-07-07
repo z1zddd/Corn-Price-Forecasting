@@ -143,6 +143,8 @@ pip install -e .[deep]
 - [配置说明](docs/configuration.md)
 - [指标说明](docs/metrics.md)
 - [双头 LSTM 模型](docs/dual-stream-lstm.md)
+- [57 模型池](docs/official-model-pool.md)
+- [无泄漏组合搜索](docs/ensemble-search.md)
 - [Agent 工作流](docs/agent-workflow.md)
 
 ## 测试
