@@ -78,6 +78,47 @@ def test_rolling_topk_uses_only_prior_target_labels(tmp_path: Path):
     np.testing.assert_allclose(original[:-1], mutated[:-1])
 
 
+def test_diverse_greedy_uses_only_prior_target_labels(tmp_path: Path):
+    predictions_path = tmp_path / "toy_predictions.csv"
+    _toy_predictions().to_csv(predictions_path, index=False)
+    predictions = ensemble_search.read_predictions(predictions_path)
+    matrix = ensemble_search.build_matrix(predictions, horizon=1, min_coverage=1.0)
+    prob = matrix["prob"]
+    vote = matrix["vote"]
+    y = matrix["base"]["actual_direction"].to_numpy(int)
+
+    original = ensemble_search.rolling_diverse_greedy_score(
+        prob,
+        vote,
+        y,
+        metric="ba",
+        topn=3,
+        k=2,
+        window=9999,
+        diversity_lambda=0.1,
+        source="hard",
+        threshold_mode="rolling_ba",
+        min_history=2,
+    )
+    changed_future = y.copy()
+    changed_future[-1] = 1 - changed_future[-1]
+    mutated = ensemble_search.rolling_diverse_greedy_score(
+        prob,
+        vote,
+        changed_future,
+        metric="ba",
+        topn=3,
+        k=2,
+        window=9999,
+        diversity_lambda=0.1,
+        source="hard",
+        threshold_mode="rolling_ba",
+        min_history=2,
+    )
+
+    np.testing.assert_allclose(original[:-1], mutated[:-1])
+
+
 def test_ensemble_search_cli_writes_walk_forward_leaderboard(tmp_path: Path):
     predictions_path = tmp_path / "toy_predictions.csv"
     output_dir = tmp_path / "ensemble_search"
@@ -96,7 +137,7 @@ def test_ensemble_search_cli_writes_walk_forward_leaderboard(tmp_path: Path):
             "--horizons",
             "1",
             "--families",
-            "simple,topk,oracle",
+            "simple,threshold,topk,oracle",
             "--preset",
             "fast",
             "--min-history",

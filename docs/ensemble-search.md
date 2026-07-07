@@ -13,12 +13,16 @@ performance.
 
 - `simple`: static mean/median soft probabilities and static hard votes across
   all available prediction streams.
+- `threshold`: rolling threshold wrappers around static ensemble scores; each
+  test month's threshold is chosen only from earlier target months.
 - `topk`: rolling top-k selection by prior balanced accuracy, AUC, AP, or Brier
   score, with hard or soft aggregation.
 - `weighted`: rolling top-k with historical score-based weights.
 - `online`: online weighted-majority style updating after each revealed label.
 - `dynamic`: local dynamic ensemble selection using nearest historical
   prediction vectors and local model competence.
+- `diverse`: diversity-aware greedy ensemble selection that balances historical
+  competence with pairwise hard-vote disagreement.
 - `stacking`: rolling logistic stacking on historical base probabilities and
   hard votes.
 - `exhaustive`: rolling exhaustive hard-vote subset search over a small
@@ -54,8 +58,9 @@ Useful outputs:
 On the 57-model corn spike prediction pool from the long-lookback rolling run,
 the searched valid ensemble methods did not reach 0.90 balanced accuracy:
 
-- Horizon 1 best valid method: `rolling_top6_brier_hard_w18_rolling_ba`,
-  balanced accuracy 0.6282, AUC 0.6762, AP 0.6537.
+- Horizon 1 best valid method:
+  `diverse_greedy_topn20_k6_brier_soft_lam0.1_w18_fixed`, balanced accuracy
+  0.6410, AUC 0.6141, AP 0.6215.
 - Horizon 2 best valid method: `dynamic_local_topn20_nn10_topm3_hard`,
   balanced accuracy 0.5838, AUC 0.6246, AP 0.6545.
 - Diagnostic oracle top-k upper bounds were 0.8077 for horizon 1 and 0.7443 for

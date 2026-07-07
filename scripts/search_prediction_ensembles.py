@@ -59,7 +59,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--families",
         default="all",
-        help="Comma-separated method families: simple,topk,weighted,online,dynamic,stacking,exhaustive,forward,oracle or all",
+        help=(
+            "Comma-separated method families: simple,threshold,topk,weighted,"
+            "online,dynamic,diverse,stacking,exhaustive,forward,oracle or all"
+        ),
     )
     parser.add_argument("--bootstrap", type=int, default=0)
     parser.add_argument("--ci-level", type=float, default=0.95)
@@ -181,7 +184,19 @@ def parse_families(value: str) -> set[str] | None:
     if str(value).strip().lower() == "all":
         return None
     families = {item.strip().lower() for item in str(value).split(",") if item.strip()}
-    allowed = {"simple", "topk", "weighted", "online", "dynamic", "stacking", "exhaustive", "forward", "oracle"}
+    allowed = {
+        "simple",
+        "threshold",
+        "topk",
+        "weighted",
+        "online",
+        "dynamic",
+        "diverse",
+        "stacking",
+        "exhaustive",
+        "forward",
+        "oracle",
+    }
     unknown = sorted(families - allowed)
     if unknown:
         raise ValueError(f"Unknown ensemble families: {unknown}")
@@ -217,11 +232,39 @@ def run_horizon_search(matrix: dict, args: argparse.Namespace) -> list[EnsembleR
         ks = [3, 6, 10, 20]
         topn_values = [10, 20]
         ranking_metrics = ["ba", "brier"]
+        diversity_lambdas = [0.10]
     else:
         windows = [12, 18, 24, 36, 9999]
         ks = [3, 5, 6, 9, 12, 15, 20, 30, 50]
         topn_values = [10, 20, 40, 80]
         ranking_metrics = ["ba", "auc", "ap", "brier"]
+        diversity_lambdas = [0.02, 0.05, 0.10, 0.20, 0.35]
+
+    if enabled(args, "threshold"):
+        print(f"[h{matrix['horizon']}] rolling threshold wrappers", flush=True)
+        threshold_methods = [
+            ("all_soft_mean", prob, "mean"),
+            ("all_soft_median", prob, "median"),
+            ("all_hard_mean", vote, "mean"),
+            ("all_hard_strict", vote, "strict"),
+        ]
+        for base_name, frame, reducer in threshold_methods:
+            raw_score = aggregate_frame(frame, reducer=reducer)
+            for window in windows:
+                score = rolling_threshold_score(raw_score, y, window=window, min_history=args.min_history)
+                result_name = f"{base_name}_rolling_threshold_w{window}"
+                results.append(
+                    make_result(
+                        result_name,
+                        matrix,
+                        "valid_walk_forward",
+                        "rolling_threshold",
+                        {"base": base_name, "window": window},
+                        score,
+                        threshold=0.5,
+                        args=args,
+                    )
+                )
 
     if enabled(args, "topk"):
         print(f"[h{matrix['horizon']}] rolling top-k", flush=True)
@@ -273,6 +316,62 @@ def run_horizon_search(matrix: dict, args: argparse.Namespace) -> list[EnsembleR
                         score = dynamic_local_selection(prob, vote, y, topn=topn, local_k=local_k, topm=topm, source=source, min_history=args.min_history)
                         result_name = f"dynamic_local_topn{topn}_nn{local_k}_topm{topm}_{source}"
                         results.append(make_result(result_name, matrix, "valid_walk_forward", "dynamic_local_selection", {"topn": topn, "local_k": local_k, "topm": topm, "source": source}, score, threshold=0.5, args=args))
+
+    if enabled(args, "diverse"):
+        print(f"[h{matrix['horizon']}] diversity-aware greedy selection", flush=True)
+        diverse_topns = [20] if args.preset == "fast" else [10, 20, 40]
+        diverse_ks = [3, 6] if args.preset == "fast" else [3, 5, 6, 10, 15]
+        diverse_windows = [18, 9999] if args.preset == "fast" else [12, 18, 24, 36, 9999]
+        rank_cache = build_rank_cache(prob, vote, y, ["ba", "brier"], diverse_windows)
+        for metric in ["ba", "brier"]:
+            for window in diverse_windows:
+                for topn in diverse_topns:
+                    if topn > len(candidates):
+                        continue
+                    for k in diverse_ks:
+                        if k > topn:
+                            continue
+                        for diversity_lambda in diversity_lambdas:
+                            for source in ["hard", "soft"]:
+                                for threshold_mode in ["fixed", "rolling_ba"]:
+                                    score = rolling_diverse_greedy_score(
+                                        prob,
+                                        vote,
+                                        y,
+                                        metric=metric,
+                                        topn=topn,
+                                        k=k,
+                                        window=window,
+                                        diversity_lambda=diversity_lambda,
+                                        source=source,
+                                        threshold_mode=threshold_mode,
+                                        min_history=args.min_history,
+                                        rank_cache=rank_cache,
+                                    )
+                                    result_name = (
+                                        f"diverse_greedy_topn{topn}_k{k}_{metric}_{source}"
+                                        f"_lam{diversity_lambda:g}_w{window}_{threshold_mode}"
+                                    )
+                                    results.append(
+                                        make_result(
+                                            result_name,
+                                            matrix,
+                                            "valid_walk_forward",
+                                            "diversity_greedy",
+                                            {
+                                                "metric": metric,
+                                                "topn": topn,
+                                                "k": k,
+                                                "window": window,
+                                                "diversity_lambda": diversity_lambda,
+                                                "source": source,
+                                                "threshold_mode": threshold_mode,
+                                            },
+                                            score,
+                                            threshold=0.5,
+                                            args=args,
+                                        )
+                                    )
 
     if enabled(args, "stacking"):
         print(f"[h{matrix['horizon']}] logistic stacking", flush=True)
@@ -404,6 +503,22 @@ def aggregate_frame(frame: pd.DataFrame, *, reducer: str) -> np.ndarray:
     raise ValueError(f"Unknown reducer: {reducer}")
 
 
+def rolling_threshold_score(raw_score: np.ndarray, y: np.ndarray, *, window: int, min_history: int) -> np.ndarray:
+    scores = np.full(len(y), np.nan, dtype=float)
+    raw_score = np.asarray(raw_score, dtype=float)
+    for idx in range(len(y)):
+        if not np.isfinite(raw_score[idx]):
+            continue
+        hist = history_indices(idx, window)
+        hist = hist[np.isfinite(raw_score[hist])]
+        if len(hist) < min_history or len(np.unique(y[hist])) < 2:
+            scores[idx] = raw_score[idx]
+            continue
+        threshold = best_threshold(y[hist], raw_score[hist])
+        scores[idx] = 0.500001 if raw_score[idx] > threshold else 0.499999
+    return scores
+
+
 def build_rank_cache(prob: pd.DataFrame, vote: pd.DataFrame, y: np.ndarray, metrics: list[str], windows: list[int]) -> dict[tuple[str, int, int], list[str]]:
     cache: dict[tuple[str, int, int], list[str]] = {}
     all_candidates = list(prob.columns)
@@ -506,6 +621,101 @@ def dynamic_local_selection(prob: pd.DataFrame, vote: pd.DataFrame, y: np.ndarra
             selected = sorted(ranked, key=lambda col: local_scores[col], reverse=True)[:topm]
         scores[idx] = float(base.iloc[idx][selected].mean()) if selected else np.nan
     return scores
+
+
+def rolling_diverse_greedy_score(
+    prob: pd.DataFrame,
+    vote: pd.DataFrame,
+    y: np.ndarray,
+    *,
+    metric: str,
+    topn: int,
+    k: int,
+    window: int,
+    diversity_lambda: float,
+    source: str,
+    threshold_mode: str,
+    min_history: int,
+    rank_cache: dict[tuple[str, int, int], list[str]] | None = None,
+) -> np.ndarray:
+    scores = np.full(len(y), np.nan, dtype=float)
+    base = prob if source == "soft" else vote
+    for idx in range(len(y)):
+        hist = history_indices(idx, window)
+        current_cols = nonmissing_columns(base.iloc[idx])
+        if len(hist) < min_history or not current_cols:
+            scores[idx] = float(base.iloc[idx][current_cols].mean()) if current_cols else np.nan
+            continue
+        ranked_all = rank_cache.get((metric, window, idx), []) if rank_cache is not None else rank_candidates(prob, vote, y, hist, current_cols, metric)
+        current_set = set(current_cols)
+        ranked = [col for col in ranked_all if col in current_set][:topn]
+        if not ranked:
+            scores[idx] = float(base.iloc[idx][current_cols].mean())
+            continue
+        selected = greedy_diverse_subset(prob, vote, y, hist, ranked, k=k, diversity_lambda=diversity_lambda, source=source)
+        if not selected:
+            scores[idx] = float(base.iloc[idx][current_cols].mean())
+            continue
+        raw_score = float(base.iloc[idx][selected].mean())
+        if threshold_mode == "rolling_ba":
+            hist_scores = base.iloc[hist][selected].mean(axis=1).to_numpy(float)
+            threshold = best_threshold(y[hist], hist_scores)
+            scores[idx] = 0.500001 if raw_score > threshold else 0.499999
+        else:
+            scores[idx] = raw_score
+    return scores
+
+
+def greedy_diverse_subset(
+    prob: pd.DataFrame,
+    vote: pd.DataFrame,
+    y: np.ndarray,
+    rows: np.ndarray,
+    candidates: list[str],
+    *,
+    k: int,
+    diversity_lambda: float,
+    source: str,
+) -> list[str]:
+    selected: list[str] = []
+    remaining = list(candidates)
+    base = prob if source == "soft" else vote
+    for _ in range(min(k, len(remaining))):
+        best_col = None
+        best_score = -float("inf")
+        for col in remaining:
+            trial = selected + [col]
+            complete_rows = rows[base.iloc[rows][trial].notna().all(axis=1).to_numpy(bool)]
+            if len(complete_rows) < 2:
+                continue
+            trial_scores = base.iloc[complete_rows][trial].mean(axis=1).to_numpy(float)
+            competence = balanced_acc_safe(y[complete_rows], (trial_scores > 0.5).astype(int))
+            diversity = mean_pairwise_disagreement(vote, complete_rows, trial)
+            objective = competence + diversity_lambda * diversity
+            if objective > best_score:
+                best_score = objective
+                best_col = col
+        if best_col is None:
+            break
+        selected.append(best_col)
+        remaining.remove(best_col)
+    return selected
+
+
+def mean_pairwise_disagreement(vote: pd.DataFrame, rows: np.ndarray, cols: list[str]) -> float:
+    if len(cols) < 2:
+        return 0.0
+    values = vote.iloc[rows][cols].to_numpy(float)
+    total = 0.0
+    count = 0
+    for left, right in itertools.combinations(range(values.shape[1]), 2):
+        pair = values[:, [left, right]]
+        finite = np.isfinite(pair).all(axis=1)
+        if finite.sum() == 0:
+            continue
+        total += float(np.mean(pair[finite, 0] != pair[finite, 1]))
+        count += 1
+    return total / count if count else 0.0
 
 
 def rolling_logistic_stack(prob: pd.DataFrame, vote: pd.DataFrame, y: np.ndarray, *, topn: int, window: int, c_value: float, min_history: int) -> np.ndarray:
