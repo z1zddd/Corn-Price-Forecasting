@@ -60,8 +60,8 @@ def parse_args() -> argparse.Namespace:
         "--families",
         default="all",
         help=(
-            "Comma-separated method families: simple,threshold,topk,weighted,"
-            "online,dynamic,diverse,stacking,exhaustive,forward,oracle or all"
+            "Comma-separated method families: simple,threshold,topk,weighted,expweight,"
+            "online,dynamic,diverse,blend,stacking,exhaustive,forward,oracle or all"
         ),
     )
     parser.add_argument("--bootstrap", type=int, default=0)
@@ -189,9 +189,11 @@ def parse_families(value: str) -> set[str] | None:
         "threshold",
         "topk",
         "weighted",
+        "expweight",
         "online",
         "dynamic",
         "diverse",
+        "blend",
         "stacking",
         "exhaustive",
         "forward",
@@ -233,12 +235,18 @@ def run_horizon_search(matrix: dict, args: argparse.Namespace) -> list[EnsembleR
         topn_values = [10, 20]
         ranking_metrics = ["ba", "brier"]
         diversity_lambdas = [0.10]
+        exp_losses = ["brier", "zeroone"]
+        exp_etas = [1.0, 3.0, 8.0]
+        blend_ks = [3, 4, 6]
     else:
         windows = [12, 18, 24, 36, 9999]
         ks = [3, 5, 6, 9, 12, 15, 20, 30, 50]
         topn_values = [10, 20, 40, 80]
         ranking_metrics = ["ba", "auc", "ap", "brier"]
         diversity_lambdas = [0.02, 0.05, 0.10, 0.20, 0.35]
+        exp_losses = ["brier", "logloss", "zeroone"]
+        exp_etas = [0.5, 1.0, 2.0, 5.0, 10.0]
+        blend_ks = [3, 4, 5, 6]
 
     if enabled(args, "threshold"):
         print(f"[h{matrix['horizon']}] rolling threshold wrappers", flush=True)
@@ -292,6 +300,54 @@ def run_horizon_search(matrix: dict, args: argparse.Namespace) -> list[EnsembleR
                         score = rolling_weighted_score(prob, vote, y, metric=metric, k=k, window=window, source=source, min_history=args.min_history, rank_cache=rank_cache)
                         result_name = f"rolling_weighted_top{k}_{metric}_{source}_w{window}"
                         results.append(make_result(result_name, matrix, "valid_walk_forward", "rolling_weighted", {"metric": metric, "k": k, "window": window, "source": source}, score, threshold=0.5, args=args))
+
+    if enabled(args, "expweight"):
+        print(f"[h{matrix['horizon']}] exponential loss weighting", flush=True)
+        rank_cache = build_rank_cache(prob, vote, y, ["ba", "brier"], windows)
+        for loss in exp_losses:
+            rank_metric = "ba" if loss == "zeroone" else "brier"
+            for window in windows:
+                for topn in topn_values:
+                    if topn > len(candidates):
+                        continue
+                    for eta in exp_etas:
+                        for source in ["hard", "soft"]:
+                            for threshold_mode in ["fixed", "rolling_ba"]:
+                                score = rolling_exp_weight_score(
+                                    prob,
+                                    vote,
+                                    y,
+                                    loss=loss,
+                                    rank_metric=rank_metric,
+                                    topn=topn,
+                                    window=window,
+                                    eta=eta,
+                                    source=source,
+                                    threshold_mode=threshold_mode,
+                                    min_history=args.min_history,
+                                    rank_cache=rank_cache,
+                                )
+                                result_name = f"expweight_topn{topn}_{loss}_{source}_eta{eta:g}_w{window}_{threshold_mode}"
+                                results.append(
+                                    make_result(
+                                        result_name,
+                                        matrix,
+                                        "valid_walk_forward",
+                                        "exponential_weighting",
+                                        {
+                                            "loss": loss,
+                                            "rank_metric": rank_metric,
+                                            "topn": topn,
+                                            "window": window,
+                                            "eta": eta,
+                                            "source": source,
+                                            "threshold_mode": threshold_mode,
+                                        },
+                                        score,
+                                        threshold=0.5,
+                                        args=args,
+                                    )
+                                )
 
     if enabled(args, "online"):
         print(f"[h{matrix['horizon']}] online weighted majority", flush=True)
@@ -372,6 +428,57 @@ def run_horizon_search(matrix: dict, args: argparse.Namespace) -> list[EnsembleR
                                             args=args,
                                         )
                                     )
+
+    if enabled(args, "blend"):
+        print(f"[h{matrix['horizon']}] rolling convex blend grid", flush=True)
+        rank_cache = build_rank_cache(prob, vote, y, ["ba", "brier"], windows)
+        for objective in ["ba", "brier"]:
+            rank_metric = objective
+            for window in windows:
+                for k in blend_ks:
+                    if k > len(candidates):
+                        continue
+                    grid_step = 0.25 if k <= 4 else 0.50
+                    for source in ["hard", "soft"]:
+                        for threshold_mode in ["fixed", "rolling_ba"]:
+                            score = rolling_blend_grid_score(
+                                prob,
+                                vote,
+                                y,
+                                objective=objective,
+                                rank_metric=rank_metric,
+                                k=k,
+                                window=window,
+                                grid_step=grid_step,
+                                source=source,
+                                threshold_mode=threshold_mode,
+                                min_history=args.min_history,
+                                rank_cache=rank_cache,
+                            )
+                            result_name = (
+                                f"blend_grid_top{k}_{objective}_{source}"
+                                f"_step{grid_step:g}_w{window}_{threshold_mode}"
+                            )
+                            results.append(
+                                make_result(
+                                    result_name,
+                                    matrix,
+                                    "valid_walk_forward",
+                                    "rolling_blend_grid",
+                                    {
+                                        "objective": objective,
+                                        "rank_metric": rank_metric,
+                                        "k": k,
+                                        "window": window,
+                                        "grid_step": grid_step,
+                                        "source": source,
+                                        "threshold_mode": threshold_mode,
+                                    },
+                                    score,
+                                    threshold=0.5,
+                                    args=args,
+                                )
+                            )
 
     if enabled(args, "stacking"):
         print(f"[h{matrix['horizon']}] logistic stacking", flush=True)
@@ -577,6 +684,86 @@ def rolling_weighted_score(prob: pd.DataFrame, vote: pd.DataFrame, y: np.ndarray
     return scores
 
 
+def rolling_exp_weight_score(
+    prob: pd.DataFrame,
+    vote: pd.DataFrame,
+    y: np.ndarray,
+    *,
+    loss: str,
+    rank_metric: str,
+    topn: int,
+    window: int,
+    eta: float,
+    source: str,
+    threshold_mode: str,
+    min_history: int,
+    rank_cache: dict[tuple[str, int, int], list[str]] | None = None,
+) -> np.ndarray:
+    scores = np.full(len(y), np.nan, dtype=float)
+    base = prob if source == "soft" else vote
+    for idx in range(len(y)):
+        hist = history_indices(idx, window)
+        current_cols = nonmissing_columns(base.iloc[idx])
+        if len(hist) < min_history or not current_cols:
+            scores[idx] = float(base.iloc[idx][current_cols].mean()) if current_cols else np.nan
+            continue
+        ranked_all = rank_cache.get((rank_metric, window, idx), []) if rank_cache is not None else rank_candidates(prob, vote, y, hist, current_cols, rank_metric)
+        current_set = set(current_cols)
+        selected = [col for col in ranked_all if col in current_set][:topn]
+        if not selected:
+            scores[idx] = float(base.iloc[idx][current_cols].mean())
+            continue
+        complete_rows = hist[base.iloc[hist][selected].notna().all(axis=1).to_numpy(bool)]
+        if len(complete_rows) < min_history or len(np.unique(y[complete_rows])) < 2:
+            scores[idx] = float(base.iloc[idx][selected].mean())
+            continue
+        losses = candidate_loss_values(prob, vote, y, complete_rows, selected, loss=loss, source=source)
+        weights = exp_loss_weights(losses, eta)
+        raw_score = weighted_mean(base.iloc[idx][selected].to_numpy(float), weights)
+        if threshold_mode == "rolling_ba":
+            hist_values = base.iloc[complete_rows][selected].to_numpy(float)
+            hist_scores = weighted_row_mean(hist_values, weights)
+            threshold = best_threshold(y[complete_rows], hist_scores)
+            scores[idx] = 0.500001 if raw_score > threshold else 0.499999
+        else:
+            scores[idx] = raw_score
+    return scores
+
+
+def candidate_loss_values(
+    prob: pd.DataFrame,
+    vote: pd.DataFrame,
+    y: np.ndarray,
+    rows: np.ndarray,
+    candidates: list[str],
+    *,
+    loss: str,
+    source: str,
+) -> np.ndarray:
+    base = prob if source == "soft" else vote
+    values = base.iloc[rows][candidates].to_numpy(float)
+    truth = y[rows].astype(float)[:, None]
+    if loss == "brier":
+        return np.nanmean((values - truth) ** 2, axis=0)
+    if loss == "logloss":
+        clipped = np.clip(values, 1e-6, 1.0 - 1e-6)
+        return np.nanmean(-(truth * np.log(clipped) + (1.0 - truth) * np.log(1.0 - clipped)), axis=0)
+    if loss == "zeroone":
+        return np.nanmean((values > 0.5) != truth.astype(bool), axis=0)
+    raise ValueError(f"Unknown loss: {loss}")
+
+
+def exp_loss_weights(losses: np.ndarray, eta: float) -> np.ndarray:
+    losses = np.asarray(losses, dtype=float)
+    if not np.isfinite(losses).any():
+        return np.ones(len(losses), dtype=float) / max(1, len(losses))
+    fill = float(np.nanmax(losses[np.isfinite(losses)]))
+    losses = np.where(np.isfinite(losses), losses, fill)
+    centered = losses - float(np.nanmin(losses))
+    weights = np.exp(-float(eta) * centered)
+    return weights / weights.sum() if weights.sum() > 0 else np.ones(len(losses), dtype=float) / max(1, len(losses))
+
+
 def online_weighted_majority(prob: pd.DataFrame, vote: pd.DataFrame, y: np.ndarray, *, beta: float, source: str) -> np.ndarray:
     base = prob if source == "soft" else vote
     columns = list(base.columns)
@@ -716,6 +903,92 @@ def mean_pairwise_disagreement(vote: pd.DataFrame, rows: np.ndarray, cols: list[
         total += float(np.mean(pair[finite, 0] != pair[finite, 1]))
         count += 1
     return total / count if count else 0.0
+
+
+def rolling_blend_grid_score(
+    prob: pd.DataFrame,
+    vote: pd.DataFrame,
+    y: np.ndarray,
+    *,
+    objective: str,
+    rank_metric: str,
+    k: int,
+    window: int,
+    grid_step: float,
+    source: str,
+    threshold_mode: str,
+    min_history: int,
+    rank_cache: dict[tuple[str, int, int], list[str]] | None = None,
+) -> np.ndarray:
+    scores = np.full(len(y), np.nan, dtype=float)
+    base = prob if source == "soft" else vote
+    weight_grid = simplex_weight_grid(k, grid_step)
+    for idx in range(len(y)):
+        hist = history_indices(idx, window)
+        current_cols = nonmissing_columns(base.iloc[idx])
+        if len(hist) < min_history or len(current_cols) < k:
+            scores[idx] = float(base.iloc[idx][current_cols].mean()) if current_cols else np.nan
+            continue
+        ranked_all = rank_cache.get((rank_metric, window, idx), []) if rank_cache is not None else rank_candidates(prob, vote, y, hist, current_cols, rank_metric)
+        current_set = set(current_cols)
+        selected = [col for col in ranked_all if col in current_set][:k]
+        if len(selected) < k:
+            scores[idx] = float(base.iloc[idx][current_cols].mean())
+            continue
+        complete_rows = hist[base.iloc[hist][selected].notna().all(axis=1).to_numpy(bool)]
+        if len(complete_rows) < min_history or len(np.unique(y[complete_rows])) < 2:
+            scores[idx] = float(base.iloc[idx][selected].mean())
+            continue
+        hist_values = base.iloc[complete_rows][selected].to_numpy(float)
+        weights, threshold = best_blend_weights(y[complete_rows], hist_values, weight_grid, objective=objective, threshold_mode=threshold_mode)
+        raw_score = weighted_mean(base.iloc[idx][selected].to_numpy(float), weights)
+        if threshold_mode == "rolling_ba":
+            scores[idx] = 0.500001 if raw_score > threshold else 0.499999
+        else:
+            scores[idx] = raw_score
+    return scores
+
+
+def simplex_weight_grid(k: int, step: float) -> np.ndarray:
+    units = int(round(1.0 / float(step)))
+    combos: list[list[int]] = []
+
+    def rec(prefix: list[int], remaining: int, slots: int) -> None:
+        if slots == 1:
+            combos.append(prefix + [remaining])
+            return
+        for value in range(remaining + 1):
+            rec(prefix + [value], remaining - value, slots - 1)
+
+    rec([], units, k)
+    return np.asarray(combos, dtype=float) / float(units)
+
+
+def best_blend_weights(
+    y_true: np.ndarray,
+    values: np.ndarray,
+    weight_grid: np.ndarray,
+    *,
+    objective: str,
+    threshold_mode: str,
+) -> tuple[np.ndarray, float]:
+    best_weights = weight_grid[0]
+    best_threshold_value = 0.5
+    best_score = -float("inf")
+    for weights in weight_grid:
+        score_values = values @ weights
+        threshold = best_threshold(y_true, score_values) if threshold_mode == "rolling_ba" else 0.5
+        if objective == "ba":
+            objective_score = balanced_acc_safe(y_true, (score_values > threshold).astype(int))
+        elif objective == "brier":
+            objective_score = -float(np.mean((score_values - y_true.astype(float)) ** 2))
+        else:
+            raise ValueError(f"Unknown blend objective: {objective}")
+        if objective_score > best_score:
+            best_score = objective_score
+            best_weights = weights
+            best_threshold_value = threshold
+    return best_weights, best_threshold_value
 
 
 def rolling_logistic_stack(prob: pd.DataFrame, vote: pd.DataFrame, y: np.ndarray, *, topn: int, window: int, c_value: float, min_history: int) -> np.ndarray:
@@ -912,6 +1185,15 @@ def weighted_mean(values: np.ndarray, weights: np.ndarray) -> float:
     if weights.sum() <= 0:
         return float(np.mean(values))
     return float(np.average(values, weights=weights))
+
+
+def weighted_row_mean(values: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    values = np.asarray(values, dtype=float)
+    weights = np.asarray(weights, dtype=float)
+    out = np.full(values.shape[0], np.nan, dtype=float)
+    for idx, row in enumerate(values):
+        out[idx] = weighted_mean(row, weights)
+    return out
 
 
 def balanced_acc_safe(y_true: np.ndarray, y_pred: np.ndarray) -> float:

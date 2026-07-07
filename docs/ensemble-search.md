@@ -18,11 +18,15 @@ performance.
 - `topk`: rolling top-k selection by prior balanced accuracy, AUC, AP, or Brier
   score, with hard or soft aggregation.
 - `weighted`: rolling top-k with historical score-based weights.
+- `expweight`: exponential loss weighting over historically ranked prediction
+  streams, following the online expert-advice/Hedge family.
 - `online`: online weighted-majority style updating after each revealed label.
 - `dynamic`: local dynamic ensemble selection using nearest historical
   prediction vectors and local model competence.
 - `diverse`: diversity-aware greedy ensemble selection that balances historical
   competence with pairwise hard-vote disagreement.
+- `blend`: rolling convex weight grid search over the historically strongest
+  streams, a lightweight blending/Super Learner-style check.
 - `stacking`: rolling logistic stacking on historical base probabilities and
   hard votes.
 - `exhaustive`: rolling exhaustive hard-vote subset search over a small
@@ -59,10 +63,11 @@ On the 57-model corn spike prediction pool from the long-lookback rolling run,
 the searched valid ensemble methods did not reach 0.90 balanced accuracy:
 
 - Horizon 1 best valid method:
-  `diverse_greedy_topn20_k6_brier_soft_lam0.1_w18_fixed`, balanced accuracy
-  0.6410, AUC 0.6141, AP 0.6215.
-- Horizon 2 best valid method: `dynamic_local_topn20_nn10_topm3_hard`,
-  balanced accuracy 0.5838, AUC 0.6246, AP 0.6545.
+  `blend_grid_top3_brier_hard_step0.25_w18_fixed`, balanced accuracy 0.6667,
+  AUC 0.6213, AP 0.5551.
+- Horizon 2 best valid method:
+  `blend_grid_top4_ba_soft_step0.25_w18_rolling_ba`, balanced accuracy 0.6065,
+  AUC 0.5483, AP 0.6238.
 - Diagnostic oracle top-k upper bounds were 0.8077 for horizon 1 and 0.7443 for
   horizon 2, so the current base prediction pool does not show evidence that a
   non-leaky combination can plausibly reach 0.90 balanced accuracy.

@@ -119,6 +119,74 @@ def test_diverse_greedy_uses_only_prior_target_labels(tmp_path: Path):
     np.testing.assert_allclose(original[:-1], mutated[:-1])
 
 
+def test_expweight_and_blend_use_only_prior_target_labels(tmp_path: Path):
+    predictions_path = tmp_path / "toy_predictions.csv"
+    _toy_predictions().to_csv(predictions_path, index=False)
+    predictions = ensemble_search.read_predictions(predictions_path)
+    matrix = ensemble_search.build_matrix(predictions, horizon=1, min_coverage=1.0)
+    prob = matrix["prob"]
+    vote = matrix["vote"]
+    y = matrix["base"]["actual_direction"].to_numpy(int)
+    changed_future = y.copy()
+    changed_future[-1] = 1 - changed_future[-1]
+
+    original_exp = ensemble_search.rolling_exp_weight_score(
+        prob,
+        vote,
+        y,
+        loss="brier",
+        rank_metric="brier",
+        topn=3,
+        window=9999,
+        eta=2.0,
+        source="soft",
+        threshold_mode="rolling_ba",
+        min_history=2,
+    )
+    mutated_exp = ensemble_search.rolling_exp_weight_score(
+        prob,
+        vote,
+        changed_future,
+        loss="brier",
+        rank_metric="brier",
+        topn=3,
+        window=9999,
+        eta=2.0,
+        source="soft",
+        threshold_mode="rolling_ba",
+        min_history=2,
+    )
+    original_blend = ensemble_search.rolling_blend_grid_score(
+        prob,
+        vote,
+        y,
+        objective="ba",
+        rank_metric="ba",
+        k=3,
+        window=9999,
+        grid_step=0.5,
+        source="soft",
+        threshold_mode="rolling_ba",
+        min_history=2,
+    )
+    mutated_blend = ensemble_search.rolling_blend_grid_score(
+        prob,
+        vote,
+        changed_future,
+        objective="ba",
+        rank_metric="ba",
+        k=3,
+        window=9999,
+        grid_step=0.5,
+        source="soft",
+        threshold_mode="rolling_ba",
+        min_history=2,
+    )
+
+    np.testing.assert_allclose(original_exp[:-1], mutated_exp[:-1])
+    np.testing.assert_allclose(original_blend[:-1], mutated_blend[:-1])
+
+
 def test_ensemble_search_cli_writes_walk_forward_leaderboard(tmp_path: Path):
     predictions_path = tmp_path / "toy_predictions.csv"
     output_dir = tmp_path / "ensemble_search"
@@ -137,7 +205,7 @@ def test_ensemble_search_cli_writes_walk_forward_leaderboard(tmp_path: Path):
             "--horizons",
             "1",
             "--families",
-            "simple,threshold,topk,oracle",
+            "simple,threshold,topk,expweight,blend,oracle",
             "--preset",
             "fast",
             "--min-history",
