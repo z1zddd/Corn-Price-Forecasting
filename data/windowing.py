@@ -42,6 +42,8 @@ def make_windows(
                 "window_end_date": dates.iloc[end_idx],
             }
         )
+        if "target_date_fwd" in df.columns:
+            meta_rows[-1]["target_date"] = pd.to_datetime(df["target_date_fwd"].iloc[end_idx])
 
     if not x_rows:
         raise ValueError("No windows produced; reduce lookback or add more rows")

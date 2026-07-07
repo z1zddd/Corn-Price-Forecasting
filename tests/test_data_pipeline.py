@@ -67,3 +67,13 @@ def test_load_commodity_csv_sorts_dates():
     assert encoding == "utf-8"
     assert df["date"].is_monotonic_increasing
     assert len(df) >= 24
+
+
+def test_load_commodity_csv_uses_explicit_date_format(tmp_path):
+    csv_path = tmp_path / "month_format.csv"
+    csv_path.write_text("month,close\n16-Jun,100\n16-Jul,101\n", encoding="utf-8")
+
+    df, encoding = load_commodity_csv(csv_path, date_col="month", date_format="%y-%b", encodings=["utf-8"])
+
+    assert encoding == "utf-8"
+    assert df["month"].dt.strftime("%Y-%m-%d").tolist() == ["2016-06-01", "2016-07-01"]

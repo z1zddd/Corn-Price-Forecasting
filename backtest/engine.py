@@ -35,6 +35,7 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
     df, encoding = load_commodity_csv(
         data_cfg["csv_path"],
         date_col=data_cfg["date_col"],
+        date_format=data_cfg.get("date_format"),
         encodings=data_cfg.get("encoding", ["utf-8", "gbk", "gb18030"]),
     )
     df = add_forward_targets(
@@ -42,6 +43,7 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
         price_col=data_cfg["price_col"],
         horizon=int(target_cfg["horizon"]),
         spike_threshold=float(target_cfg.get("spike_threshold", 0.0)),
+        date_col=data_cfg["date_col"],
     )
     feature_cols = select_feature_columns(
         df,
@@ -58,6 +60,7 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
     )
     y_returns = df["target_return_fwd"].iloc[meta["row_idx"].to_numpy(dtype=int)].to_numpy(dtype=float)
     dates = pd.to_datetime(meta["date"])
+    target_dates = pd.to_datetime(meta["target_date"]) if "target_date" in meta.columns else None
     windows = make_backtest_windows(
         dates,
         mode=train_window["mode"],
@@ -65,6 +68,8 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
         stride_periods=int(train_window.get("stride_periods", 1)),
         window_size_periods=train_window.get("window_size_periods"),
         max_train_periods=train_window.get("max_train_periods"),
+        target_dates=target_dates,
+        target_known_only=bool(train_window.get("target_known_only", False)),
     )
     if not windows:
         raise ValueError("No backtest windows produced")
@@ -98,6 +103,7 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
             x_val = scaler.transform_x(x[val_idx]) if len(val_idx) else None
             y_val = y[val_idx] if len(val_idx) else None
             x_test = scaler.transform_x(x[window.test_idx])
+            meta_target_dates = pd.to_datetime(meta["target_date"]) if "target_date" in meta.columns else None
 
             run_model_cfg = dict(model_cfg)
             if model_cfg.get("name") == "dual_stream_lstm" or model_cfg.get("type") == "dual_stream_lstm":
@@ -134,6 +140,11 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
                 actual_return = float(df["target_return_fwd"].iloc[source_row_idx])
                 pred_label = int(pred[local_idx])
                 pred_prob = float(prob[local_idx])
+                target_date = (
+                    str(pd.to_datetime(meta_target_dates.iloc[sample_idx]).date())
+                    if meta_target_dates is not None
+                    else ""
+                )
                 pred_probs.append(pred_prob)
                 true_labels.append(true_label)
                 actual_returns.append(actual_return)
@@ -154,9 +165,20 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
                         "window_id": window.window_id,
                         "train_start_date": str(pd.to_datetime(meta["date"].iloc[train_idx[0]]).date()),
                         "train_end_date": str(pd.to_datetime(meta["date"].iloc[train_idx[-1]]).date()),
+                        "train_max_target_date": (
+                            str(pd.to_datetime(meta_target_dates.iloc[train_idx].max()).date())
+                            if meta_target_dates is not None
+                            else ""
+                        ),
                         "val_start_date": str(pd.to_datetime(meta["date"].iloc[val_idx[0]]).date()) if len(val_idx) else "",
                         "val_end_date": str(pd.to_datetime(meta["date"].iloc[val_idx[-1]]).date()) if len(val_idx) else "",
+                        "val_max_target_date": (
+                            str(pd.to_datetime(meta_target_dates.iloc[val_idx].max()).date())
+                            if meta_target_dates is not None and len(val_idx)
+                            else ""
+                        ),
                         "test_date": str(pd.to_datetime(meta["date"].iloc[sample_idx]).date()),
+                        "test_target_date": target_date,
                     }
                 )
 
@@ -203,6 +225,7 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
         "feature_cols": feature_cols,
         "windows": len(windows),
         "scaling": "train_only_sequence_standardizer",
+        "target_known_only": bool(train_window.get("target_known_only", False)),
         "val_ratio": val_ratio,
     }
     out = Path(output_dir)

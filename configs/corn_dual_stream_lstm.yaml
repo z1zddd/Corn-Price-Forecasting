@@ -35,6 +35,7 @@ train_window:
   stride_periods: 1
   window_size_periods: null
   max_train_periods: null
+  target_known_only: true
 
 split:
   val_ratio: 0.10

@@ -43,3 +43,25 @@ def test_backtest_predictions_include_temporal_train_val_test_boundaries(tmp_pat
     first = predictions.iloc[0]
     assert pd.to_datetime(first["train_end_date"]) < pd.to_datetime(first["val_start_date"])
     assert pd.to_datetime(first["val_end_date"]) < pd.to_datetime(first["test_date"])
+
+
+def test_backtest_horizon_two_uses_only_known_targets(tmp_path: Path):
+    cfg = yaml.safe_load(Path("configs/corn.yaml").read_text(encoding="utf-8"))
+    cfg["models"] = ["last_return"]
+    cfg["target"]["horizon"] = 2
+    cfg["lookback"]["default"] = 6
+    cfg["lookback"]["candidates"] = [6]
+    cfg["train_window"]["min_train_periods"] = 24
+    cfg["train_window"]["target_known_only"] = True
+    cfg["split"] = {"val_ratio": 0.0}
+    output_dir = tmp_path / "horizon_two"
+
+    run_backtest(cfg, output_dir=output_dir)
+
+    predictions = pd.read_csv(output_dir / "model_outputs" / "last_return" / "predictions.csv")
+    assert not predictions.empty
+    assert "train_max_target_date" in predictions.columns
+    assert "test_target_date" in predictions.columns
+    train_target_max = pd.to_datetime(predictions["train_max_target_date"])
+    test_anchor = pd.to_datetime(predictions["test_date"])
+    assert bool((train_target_max <= test_anchor).all())

@@ -40,6 +40,7 @@ models:
 data:
   csv_path: examples/corn/sample_data.csv
   date_col: date
+  date_format: "%Y-%m-%d"
   price_col: close
   feature_cols: auto_numeric
   encoding:
@@ -53,6 +54,10 @@ data:
 ```
 
 `feature_cols: auto_numeric` selects numeric columns after excluding date and target columns. For stricter experiments, replace it with an explicit list.
+
+`date_format` is optional but recommended when the CSV uses compact or ambiguous
+date strings such as `16-Jun`. It is passed to `pandas.to_datetime(...,
+format=date_format)` so runs are reproducible across pandas/dateutil versions.
 
 ## Target Section
 
@@ -92,6 +97,7 @@ train_window:
   stride_periods: 1
   window_size_periods: null
   max_train_periods: null
+  target_known_only: true
 ```
 
 Supported modes:
@@ -101,6 +107,11 @@ Supported modes:
 - `expanding_with_cap`: train grows but is capped at `max_train_periods`.
 
 `lookback.default` must be smaller than `min_train_periods`.
+
+`target_known_only: true` prevents forward-label leakage. For a test anchor date
+`A`, every training and validation row must have `target_date_fwd <= A`. This is
+important for horizons above one period: a row with anchor `t` and target `t+2`
+is not available for training until `t+2` is known.
 
 ## Split Section
 

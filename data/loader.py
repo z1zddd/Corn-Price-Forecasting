@@ -11,6 +11,7 @@ DEFAULT_TARGET_EXCLUDES = {
     "target_price_fwd",
     "target_return_fwd",
     "target_direction_fwd",
+    "target_date_fwd",
 }
 
 
@@ -18,6 +19,7 @@ def load_commodity_csv(
     csv_path: str | Path,
     *,
     date_col: str,
+    date_format: str | None = None,
     encodings: list[str] | tuple[str, ...] = ("utf-8", "gbk", "gb18030"),
 ) -> tuple[pd.DataFrame, str]:
     """Load a commodity CSV with encoding fallbacks and sorted dates."""
@@ -32,7 +34,10 @@ def load_commodity_csv(
             df = pd.read_csv(path, encoding=encoding)
             if date_col not in df.columns:
                 raise ValueError(f"date_col not found in CSV: {date_col}")
-            df[date_col] = pd.to_datetime(df[date_col])
+            if date_format:
+                df[date_col] = pd.to_datetime(df[date_col].astype(str), format=date_format)
+            else:
+                df[date_col] = pd.to_datetime(df[date_col])
             df = df.sort_values(date_col).reset_index(drop=True)
             return df, encoding
         except UnicodeDecodeError as exc:
