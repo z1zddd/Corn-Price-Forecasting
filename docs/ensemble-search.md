@@ -29,6 +29,9 @@ performance.
   streams, a lightweight blending/Super Learner-style check.
 - `stacking`: rolling logistic stacking on historical base probabilities and
   hard votes.
+- `metaml`: rolling sklearn meta-learners trained only on historical base
+  prediction features, including small tree ensembles, gradient boosting, SVM,
+  k-nearest neighbors, and Naive Bayes.
 - `exhaustive`: rolling exhaustive hard-vote subset search over a small
   historically ranked candidate pool.
 - `forward`: rolling forward ensemble selection over soft probabilities.
@@ -63,8 +66,8 @@ On the 57-model corn spike prediction pool from the long-lookback rolling run,
 the searched valid ensemble methods did not reach 0.90 balanced accuracy:
 
 - Horizon 1 best valid method:
-  `blend_grid_top3_brier_hard_step0.25_w18_fixed`, balanced accuracy 0.6667,
-  AUC 0.6213, AP 0.5551.
+  `metaml_knn5_distance_topn10_ba_w9999_fixed`, balanced accuracy 0.6795, AUC
+  0.6114, AP 0.5694.
 - Horizon 2 best valid method:
   `blend_grid_top4_ba_soft_step0.25_w18_rolling_ba`, balanced accuracy 0.6065,
   AUC 0.5483, AP 0.6238.

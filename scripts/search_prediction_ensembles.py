@@ -19,6 +19,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.base import clone
+from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier, HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     average_precision_score,
@@ -29,6 +31,12 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -61,7 +69,7 @@ def parse_args() -> argparse.Namespace:
         default="all",
         help=(
             "Comma-separated method families: simple,threshold,topk,weighted,expweight,"
-            "online,dynamic,diverse,blend,stacking,exhaustive,forward,oracle or all"
+            "online,dynamic,diverse,blend,stacking,metaml,exhaustive,forward,oracle or all"
         ),
     )
     parser.add_argument("--bootstrap", type=int, default=0)
@@ -195,6 +203,7 @@ def parse_families(value: str) -> set[str] | None:
         "diverse",
         "blend",
         "stacking",
+        "metaml",
         "exhaustive",
         "forward",
         "oracle",
@@ -493,6 +502,51 @@ def run_horizon_search(matrix: dict, args: argparse.Namespace) -> list[EnsembleR
                     score = rolling_logistic_stack(prob, vote, y, topn=topn, window=window, c_value=c_value, min_history=max(args.min_history, 16))
                     result_name = f"stack_logistic_topn{topn}_w{window}_C{c_value}"
                     results.append(make_result(result_name, matrix, "valid_walk_forward", "stacking_logistic", {"topn": topn, "window": window, "C": c_value}, score, threshold=0.5, args=args))
+
+    if enabled(args, "metaml"):
+        print(f"[h{matrix['horizon']}] sklearn meta learners", flush=True)
+        meta_windows = [18, 9999] if args.preset == "fast" else windows
+        meta_topns = [10, 20] if args.preset == "fast" else [10, 20, 40]
+        meta_models = meta_model_specs(args.preset)
+        rank_cache = build_rank_cache(prob, vote, y, ["ba", "brier"], meta_windows)
+        for spec_name, estimator in meta_models.items():
+            for rank_metric in ["ba", "brier"]:
+                for window in meta_windows:
+                    for topn in meta_topns:
+                        if topn > len(candidates):
+                            continue
+                        for threshold_mode in ["fixed", "train_ba"]:
+                            score = rolling_meta_model_score(
+                                prob,
+                                vote,
+                                y,
+                                estimator=estimator,
+                                rank_metric=rank_metric,
+                                topn=topn,
+                                window=window,
+                                threshold_mode=threshold_mode,
+                                min_history=max(args.min_history, 16),
+                                rank_cache=rank_cache,
+                            )
+                            result_name = f"metaml_{spec_name}_topn{topn}_{rank_metric}_w{window}_{threshold_mode}"
+                            results.append(
+                                make_result(
+                                    result_name,
+                                    matrix,
+                                    "valid_walk_forward",
+                                    "sklearn_meta_learner",
+                                    {
+                                        "model": spec_name,
+                                        "rank_metric": rank_metric,
+                                        "topn": topn,
+                                        "window": window,
+                                        "threshold_mode": threshold_mode,
+                                    },
+                                    score,
+                                    threshold=0.5,
+                                    args=args,
+                                )
+                            )
 
     if enabled(args, "exhaustive"):
         print(f"[h{matrix['horizon']}] exhaustive subsets", flush=True)
@@ -1012,6 +1066,134 @@ def rolling_logistic_stack(prob: pd.DataFrame, vote: pd.DataFrame, y: np.ndarray
         proba = model.predict_proba(x_test)
         scores[idx] = float(proba[0, classes.index(1)] if 1 in classes else proba[0, -1])
     return scores
+
+
+def meta_model_specs(preset: str) -> dict[str, object]:
+    specs: dict[str, object] = {
+        "rf_depth2": RandomForestClassifier(
+            n_estimators=80,
+            max_depth=2,
+            min_samples_leaf=3,
+            class_weight="balanced_subsample",
+            random_state=42,
+            n_jobs=1,
+        ),
+        "extra_trees_depth2": ExtraTreesClassifier(
+            n_estimators=100,
+            max_depth=2,
+            min_samples_leaf=3,
+            class_weight="balanced",
+            random_state=42,
+            n_jobs=1,
+        ),
+        "gb_stumps": GradientBoostingClassifier(
+            n_estimators=50,
+            learning_rate=0.05,
+            max_depth=1,
+            random_state=42,
+        ),
+        "histgb_small": HistGradientBoostingClassifier(
+            max_iter=40,
+            learning_rate=0.05,
+            max_leaf_nodes=7,
+            l2_regularization=1.0,
+            random_state=42,
+        ),
+        "svc_rbf": Pipeline(
+            [
+                ("scale", StandardScaler()),
+                ("svc", SVC(C=0.5, gamma="scale", class_weight="balanced", probability=True, random_state=42)),
+            ]
+        ),
+        "knn5_distance": Pipeline(
+            [
+                ("scale", StandardScaler()),
+                ("knn", KNeighborsClassifier(n_neighbors=5, weights="distance")),
+            ]
+        ),
+        "gaussian_nb": GaussianNB(),
+    }
+    if preset != "fast":
+        specs["mlp8_l2"] = Pipeline(
+            [
+                ("scale", StandardScaler()),
+                (
+                    "mlp",
+                    MLPClassifier(
+                        hidden_layer_sizes=(8,),
+                        alpha=1.0,
+                        learning_rate_init=0.01,
+                        max_iter=400,
+                        random_state=42,
+                    ),
+                ),
+            ]
+        )
+    return specs
+
+
+def rolling_meta_model_score(
+    prob: pd.DataFrame,
+    vote: pd.DataFrame,
+    y: np.ndarray,
+    *,
+    estimator: object,
+    rank_metric: str,
+    topn: int,
+    window: int,
+    threshold_mode: str,
+    min_history: int,
+    rank_cache: dict[tuple[str, int, int], list[str]] | None = None,
+) -> np.ndarray:
+    scores = np.full(len(y), np.nan, dtype=float)
+    for idx in range(len(y)):
+        hist = history_indices(idx, window)
+        current_cols = nonmissing_columns(prob.iloc[idx])
+        if len(hist) < min_history or not current_cols:
+            scores[idx] = float(prob.iloc[idx][current_cols].mean()) if current_cols else np.nan
+            continue
+        ranked_all = rank_cache.get((rank_metric, window, idx), []) if rank_cache is not None else rank_candidates(prob, vote, y, hist, current_cols, rank_metric)
+        current_set = set(current_cols)
+        selected = [col for col in ranked_all if col in current_set][:topn]
+        if not selected:
+            scores[idx] = float(prob.iloc[idx][current_cols].mean())
+            continue
+        train_rows = [row for row in hist if prob.iloc[row][selected].notna().all() and vote.iloc[row][selected].notna().all()]
+        if len(train_rows) < min_history or len(np.unique(y[train_rows])) < 2:
+            scores[idx] = float(prob.iloc[idx][selected].mean())
+            continue
+        x_train = feature_matrix(prob, vote, train_rows, selected)
+        x_test = feature_matrix(prob, vote, [idx], selected)
+        try:
+            model = clone(estimator)
+            model.fit(x_train, y[train_rows])
+            raw_score = score_from_estimator(model, x_test)
+            if threshold_mode == "train_ba":
+                train_scores = score_from_estimator(model, x_train)
+                threshold = best_threshold(y[train_rows], train_scores)
+                scores[idx] = 0.500001 if raw_score > threshold else 0.499999
+            else:
+                scores[idx] = raw_score
+        except Exception:
+            scores[idx] = float(prob.iloc[idx][selected].mean())
+    return scores
+
+
+def score_from_estimator(model: object, x: np.ndarray) -> np.ndarray | float:
+    if hasattr(model, "predict_proba"):
+        proba = model.predict_proba(x)
+        classes = list(getattr(model, "classes_", [0, 1]))
+        if 1 in classes:
+            values = proba[:, classes.index(1)]
+        else:
+            values = proba[:, -1]
+    elif hasattr(model, "decision_function"):
+        decision = np.asarray(model.decision_function(x), dtype=float)
+        values = 1.0 / (1.0 + np.exp(-decision))
+    else:
+        values = np.asarray(model.predict(x), dtype=float)
+    values = np.asarray(values, dtype=float)
+    return float(values[0]) if len(values) == 1 else values
 
 
 def rolling_exhaustive_subset(prob: pd.DataFrame, vote: pd.DataFrame, y: np.ndarray, *, topn: int, k: int, window: int, min_history: int) -> np.ndarray:

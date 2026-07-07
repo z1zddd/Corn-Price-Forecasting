@@ -187,6 +187,44 @@ def test_expweight_and_blend_use_only_prior_target_labels(tmp_path: Path):
     np.testing.assert_allclose(original_blend[:-1], mutated_blend[:-1])
 
 
+def test_meta_ml_uses_only_prior_target_labels(tmp_path: Path):
+    predictions_path = tmp_path / "toy_predictions.csv"
+    _toy_predictions().to_csv(predictions_path, index=False)
+    predictions = ensemble_search.read_predictions(predictions_path)
+    matrix = ensemble_search.build_matrix(predictions, horizon=1, min_coverage=1.0)
+    prob = matrix["prob"]
+    vote = matrix["vote"]
+    y = matrix["base"]["actual_direction"].to_numpy(int)
+    changed_future = y.copy()
+    changed_future[-1] = 1 - changed_future[-1]
+    estimator = ensemble_search.meta_model_specs("fast")["rf_depth2"]
+
+    original = ensemble_search.rolling_meta_model_score(
+        prob,
+        vote,
+        y,
+        estimator=estimator,
+        rank_metric="ba",
+        topn=3,
+        window=9999,
+        threshold_mode="fixed",
+        min_history=2,
+    )
+    mutated = ensemble_search.rolling_meta_model_score(
+        prob,
+        vote,
+        changed_future,
+        estimator=estimator,
+        rank_metric="ba",
+        topn=3,
+        window=9999,
+        threshold_mode="fixed",
+        min_history=2,
+    )
+
+    np.testing.assert_allclose(original[:-1], mutated[:-1])
+
+
 def test_ensemble_search_cli_writes_walk_forward_leaderboard(tmp_path: Path):
     predictions_path = tmp_path / "toy_predictions.csv"
     output_dir = tmp_path / "ensemble_search"
@@ -205,7 +243,7 @@ def test_ensemble_search_cli_writes_walk_forward_leaderboard(tmp_path: Path):
             "--horizons",
             "1",
             "--families",
-            "simple,threshold,topk,expweight,blend,oracle",
+            "simple,threshold,topk,expweight,blend,metaml,oracle",
             "--preset",
             "fast",
             "--min-history",
