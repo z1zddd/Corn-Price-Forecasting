@@ -30,10 +30,19 @@ def make_backtest_windows(
     stride_periods: int = 1,
     window_size_periods: int | None = None,
     max_train_periods: int | None = None,
+    target_dates=None,
+    target_known_only: bool = False,
 ) -> list[BacktestWindow]:
     """Create expanding, rolling, or capped expanding windows."""
 
     parsed_dates = pd.to_datetime(pd.Series(dates)).reset_index(drop=True)
+    parsed_target_dates = None
+    if target_dates is not None:
+        parsed_target_dates = pd.to_datetime(pd.Series(target_dates)).reset_index(drop=True)
+        if len(parsed_target_dates) != len(parsed_dates):
+            raise ValueError("target_dates must have the same length as dates")
+    if target_known_only and parsed_target_dates is None:
+        raise ValueError("target_known_only=True requires target_dates")
     n = len(parsed_dates)
     if min_train_periods < 1:
         raise ValueError("min_train_periods must be >= 1")
@@ -65,6 +74,12 @@ def make_backtest_windows(
             raise ValueError("mode must be expanding, rolling, or expanding_with_cap")
 
         train_idx = np.arange(train_start, train_end)
+        if target_known_only:
+            cutoff_date = parsed_dates.iloc[test_start]
+            known_mask = parsed_target_dates.iloc[train_idx].to_numpy() <= cutoff_date
+            train_idx = train_idx[known_mask]
+            if len(train_idx) < min_train_periods:
+                continue
         test_idx = np.arange(test_start, test_end)
         windows.append(
             BacktestWindow(
@@ -82,7 +97,7 @@ def make_backtest_windows(
     return windows
 
 
-def assert_temporal_holdout(dates, train_idx, val_idx, test_idx) -> None:
+def assert_temporal_holdout(dates, train_idx, val_idx, test_idx, target_dates=None) -> None:
     """Raise if chronological holdout is violated."""
 
     parsed_dates = pd.to_datetime(pd.Series(dates)).reset_index(drop=True)
@@ -97,3 +112,17 @@ def assert_temporal_holdout(dates, train_idx, val_idx, test_idx) -> None:
             raise ValueError(f"Temporal leakage: train max {train_dates.max()} >= val min {val_dates.min()}")
         if val_dates.max() >= test_dates.min():
             raise ValueError(f"Temporal leakage: val max {val_dates.max()} >= test min {test_dates.min()}")
+    if target_dates is not None:
+        parsed_target_dates = pd.to_datetime(pd.Series(target_dates)).reset_index(drop=True)
+        cutoff_date = test_dates.min()
+        train_target_dates = parsed_target_dates.iloc[np.asarray(train_idx)]
+        if train_target_dates.max() > cutoff_date:
+            raise ValueError(
+                f"Temporal leakage: train target max {train_target_dates.max()} > test anchor {cutoff_date}"
+            )
+        if val_idx is not None and len(val_idx) > 0:
+            val_target_dates = parsed_target_dates.iloc[np.asarray(val_idx)]
+            if val_target_dates.max() > cutoff_date:
+                raise ValueError(
+                    f"Temporal leakage: val target max {val_target_dates.max()} > test anchor {cutoff_date}"
+                )

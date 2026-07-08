@@ -1,0 +1,8 @@
+﻿方法/模型,代表模型,最好BA,结论,原因
+Gaussian Process RBF,gaussian_process_rbf,0.500,不适配,小样本月度窗口下核回归方向阈值基本退化，BA=0.50，虽然部分AUC/AP不低但不能稳定转成方向。
+Bagging 树/ExtraTree,"bagging_tree, bagging_extra_tree",0.516-0.526,不适配,重采样树在样本少、月份强噪声场景里方差偏大，最好也只到约0.52。
+浅层/平衡随机森林,"random_forest_shallow, random_forest_balanced",0.540-0.552,不推荐,这轮长回看后没有延续早期优势，random_forest_shallow 最好BA约0.552，balanced约0.540。
+AdaBoost/部分传统 boosting,"ada_boost_tree, gradient_boosting",0.536-0.551,不适配,对月度噪声和非平稳切换敏感，最佳BA约0.54-0.55，作为单模型不够。
+多项式SVM,svc_poly2,0.536,不适配,非线性核没有抓到稳定结构，AUC也偏低；SVM里只有 sigmoid 版本相对可用。
+部分深度大模型,aeon_deep_inceptiontime,0.554,谨慎/不优先,样本规模太小，容易训练不稳；本轮最好BA约0.554且出现R2 abnormal，短序列里 TimeCNN/LSTM 更实用。
+单独概率软平均,soft_uniform / soft_weighted ensemble,0.442-0.633,不推荐,不同模型概率未校准，软平均被偏正概率拖偏；hard vote 反而最稳。

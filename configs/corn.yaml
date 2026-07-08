@@ -6,6 +6,7 @@ commodity:
 data:
   csv_path: datasets/玉米价格月度_混合特征无缺失值双头LSTM版.csv
   date_col: month
+  date_format: "%y-%b"
   price_col: dce_corn_close
   feature_cols: auto_numeric
   encoding:
@@ -35,6 +36,7 @@ train_window:
   stride_periods: 1
   window_size_periods: null
   max_train_periods: null
+  target_known_only: true
 
 split:
   val_ratio: 0.10

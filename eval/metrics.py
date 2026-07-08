@@ -134,6 +134,16 @@ def compute_bootstrap_ci(
     n = len(y_true)
     if not (n == len(y_pred) == len(y_prob) == len(returns)):
         raise ValueError("All metric arrays must have the same length")
+    if n_bootstrap <= 0:
+        strategy_returns = compute_strategy_returns(y_pred, returns)
+        dir_acc = round(float(np.mean(y_pred == y_true)), 4)
+        sharpe = round(sharpe_ratio(strategy_returns), 4)
+        return {
+            "DirAcc_CI": [dir_acc, dir_acc],
+            "Sharpe_CI": [sharpe, sharpe],
+            "n_bootstrap": int(n_bootstrap),
+            "ci_level": ci_level,
+        }
 
     strategy_returns = compute_strategy_returns(y_pred, returns)
     dir_acc_boot = np.zeros(n_bootstrap)

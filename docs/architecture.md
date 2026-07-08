@@ -54,7 +54,9 @@ YAML config
 3. Generate forward targets from `data.price_col` and `target.horizon`.
 4. Select features from numeric columns or an explicit feature list.
 5. Build lookback windows using `lookback.default`.
-6. Build chronological train/test windows using `train_window.mode`.
+6. Build chronological train/test windows using `train_window.mode`; when
+   `train_window.target_known_only` is true, keep only training/validation rows
+   whose forward target date is known by the test anchor date.
 7. Fit each enabled model separately inside each backtest window.
 8. Collect out-of-sample predictions and compute metrics.
 9. Rank models by `DirAcc`, `ProfitFactor`, and `Sharpe`.
@@ -96,5 +98,9 @@ or the shorter zip-compatible form:
 The framework uses chronological windows only. It does not call random train/test splitting for backtests. The generated test point always comes after its training slice.
 
 `split.val_ratio` takes validation rows from the tail of each training window. The sequence standardizer is fit only on the remaining training rows, then reused to transform train, validation, and test windows.
+
+For forward-label tasks, set `train_window.target_known_only: true`. This
+guards horizons greater than one period by requiring each train/validation
+sample's `target_date_fwd` to be no later than the current test anchor date.
 
 The repository boundary test also prevents common large or generated artifacts from being committed, including model weights, pickled models, compressed archives, Office documents, and experiment output directories.

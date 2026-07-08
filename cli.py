@@ -27,6 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose_source.add_argument("--csv")
     diagnose_source.add_argument("--config")
     diagnose.add_argument("--date-col", default="date")
+    diagnose.add_argument("--date-format", default=None)
 
     run = subparsers.add_parser("run")
     run.add_argument("--config", required=True)
@@ -41,6 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
     auto_window_source.add_argument("--csv")
     auto_window_source.add_argument("--config")
     auto_window.add_argument("--date-col", default="date")
+    auto_window.add_argument("--date-format", default=None)
 
     build_config = subparsers.add_parser("build-config")
     build_config.add_argument("--base-config", required=True)
@@ -74,10 +76,11 @@ def main(argv: list[str] | None = None) -> None:
             df, encoding = load_commodity_csv(
                 data_cfg["csv_path"],
                 date_col=data_cfg["date_col"],
+                date_format=data_cfg.get("date_format"),
                 encodings=data_cfg.get("encoding", ["utf-8", "gbk", "gb18030"]),
             )
         else:
-            df, encoding = load_commodity_csv(args.csv, date_col=args.date_col)
+            df, encoding = load_commodity_csv(args.csv, date_col=args.date_col, date_format=args.date_format)
         report = diagnose_frame(df)
         report["encoding"] = encoding
         print(json.dumps(report, ensure_ascii=False, indent=2))
@@ -113,10 +116,11 @@ def main(argv: list[str] | None = None) -> None:
             df, encoding = load_commodity_csv(
                 data_cfg["csv_path"],
                 date_col=data_cfg["date_col"],
+                date_format=data_cfg.get("date_format"),
                 encodings=data_cfg.get("encoding", ["utf-8", "gbk", "gb18030"]),
             )
         else:
-            df, encoding = load_commodity_csv(args.csv, date_col=args.date_col)
+            df, encoding = load_commodity_csv(args.csv, date_col=args.date_col, date_format=args.date_format)
         payload = {
             "rows": int(len(df)),
             "encoding": encoding,

@@ -1,0 +1,60 @@
+commodity:
+  name: corn_official_pool_57_h1_no_news
+  exchange: DCE
+  frequency: monthly
+
+data:
+  csv_path: datasets/玉米价格月度_混合特征无缺失值双头LSTM版.csv
+  date_col: month
+  date_format: "%y-%b"
+  price_col: dce_corn_close
+  feature_cols: auto_numeric
+  encoding:
+    - utf-8
+    - utf-8-sig
+    - gbk
+    - gb18030
+  exclude_feature_cols:
+    - target_price_fwd
+    - target_return_fwd
+    - target_direction_fwd
+    - target_date_fwd
+    - dce_corn_close_next_month
+    - dce_corn_close_next_month_ret
+    - spike
+  exclude_feature_patterns:
+    - pca_*
+    - PCA*
+
+target:
+  horizon: 1
+  mode: classification
+  spike_threshold: 0.0
+
+lookback:
+  candidates: [6, 9, 12]
+  default: 6
+
+train_window:
+  mode: expanding
+  min_train_periods: 48
+  stride_periods: 1
+  window_size_periods: null
+  max_train_periods: null
+  target_known_only: true
+
+split:
+  val_ratio: 0.0
+
+evaluation:
+  primary_metric: direction_accuracy
+  ci_level: 0.95
+  ci_bootstrap_samples: 200
+
+honest_bounds:
+  dir_acc_floor: 0.50
+  dir_acc_ceiling: 0.60
+  sharpe_floor: -0.20
+  sharpe_ceiling: 1.00
+
+models: official_57

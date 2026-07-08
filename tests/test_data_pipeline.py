@@ -38,6 +38,28 @@ def test_auto_numeric_excludes_targets_and_date():
     assert cols == ["close", "volume"]
 
 
+def test_auto_numeric_exclude_patterns_remove_pca_news():
+    df = pd.DataFrame(
+        {
+            "date": pd.date_range("2020-01-01", periods=3, freq="MS"),
+            "close": [100.0, 101.0, 102.0],
+            "basis": [0.1, 0.2, 0.3],
+            "pca_001": [1.0, 0.0, 1.0],
+            "PCA002": [0.0, 1.0, 0.0],
+        }
+    )
+
+    cols = select_feature_columns(
+        df,
+        "auto_numeric",
+        date_col="date",
+        exclude_feature_cols=[],
+        exclude_feature_patterns=["pca_*", "PCA*"],
+    )
+
+    assert cols == ["close", "basis"]
+
+
 def test_make_windows_shape_and_meta():
     df = pd.DataFrame(
         {
@@ -67,3 +89,13 @@ def test_load_commodity_csv_sorts_dates():
     assert encoding == "utf-8"
     assert df["date"].is_monotonic_increasing
     assert len(df) >= 24
+
+
+def test_load_commodity_csv_uses_explicit_date_format(tmp_path):
+    csv_path = tmp_path / "month_format.csv"
+    csv_path.write_text("month,close\n16-Jun,100\n16-Jul,101\n", encoding="utf-8")
+
+    df, encoding = load_commodity_csv(csv_path, date_col="month", date_format="%y-%b", encodings=["utf-8"])
+
+    assert encoding == "utf-8"
+    assert df["month"].dt.strftime("%Y-%m-%d").tolist() == ["2016-06-01", "2016-07-01"]

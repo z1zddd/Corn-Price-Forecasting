@@ -27,6 +27,8 @@ def validate_config(config: Mapping) -> None:
     for key in ("csv_path", "date_col", "price_col", "feature_cols"):
         if key not in data:
             raise ValueError(f"Missing required data config field: {key}")
+    if "date_format" in data and data["date_format"] is not None and not isinstance(data["date_format"], str):
+        raise ValueError("data.date_format must be a string when provided")
 
     target = config["target"]
     if int(target.get("horizon", 0)) < 1:
@@ -72,6 +74,8 @@ def validate_config(config: Mapping) -> None:
         max_train = int(train_window.get("max_train_periods", 0))
         if max_train < min_train:
             raise ValueError("expanding_with_cap max_train_periods must be >= min_train_periods")
+    if "target_known_only" in train_window and not isinstance(train_window["target_known_only"], bool):
+        raise ValueError("train_window.target_known_only must be boolean when provided")
 
     split = config.get("split", {})
     val_ratio = float(split.get("val_ratio", 0.0))
@@ -79,5 +83,13 @@ def validate_config(config: Mapping) -> None:
         raise ValueError("split.val_ratio must be >= 0 and < 0.5")
 
     models = config["models"]
-    if not isinstance(models, list) or not models:
-        raise ValueError("models must be a non-empty list")
+    if isinstance(models, str):
+        if models != "official_57":
+            raise ValueError("models string must be a known model pool such as official_57")
+    elif isinstance(models, dict):
+        if "pool" not in models:
+            raise ValueError("models mapping must contain a pool field")
+        if models["pool"] != "official_57":
+            raise ValueError("models.pool must be a known model pool such as official_57")
+    elif not isinstance(models, list) or not models:
+        raise ValueError("models must be a non-empty list, a known pool string, or a pool mapping")
