@@ -13,7 +13,7 @@ Cross-cutting concerns live outside this package:
 - `baselines/`: simple benchmark models such as last-return and majority direction.
 - `classical/`: tabular classical ML adapters and factories for sklearn-style models.
 - `sequence/`: sequence neural models such as LSTM, GRU, TCN-style, Transformer, PatchTST-style, iTransformer-style, DLinear-style, and dual-stream LSTM.
-- `specs/`: model-pool specifications such as the official 57-model pool.
+- `specs/official/`: the official 57-model pool split into tabular, aeon, and Keras method files.
 
 Compatibility wrappers remain at the old paths (`models.registry`,
 `models.official_pool`, `models.deployment_ensemble`, `models.loss_variants`,
