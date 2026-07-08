@@ -1,4 +1,4 @@
-# Official 57-Model Pool
+# Official And Deployment Model Pools
 
 The framework includes the corn benchmark model pool as `models: official_57`.
 It expands to the 57 model names completed in the long-lookback corn spike run:
@@ -10,6 +10,36 @@ It expands to the 57 model names completed in the long-lookback corn spike run:
 
 The registry expands the pool through `models.official_pool.expand_model_pool`.
 Each entry uses `type: official_pool`, which creates an adapter around the official package estimator classes. Optional dependencies are loaded only when a model is fitted.
+
+## Best Deployment Ensemble Pool
+
+The framework also registers the fixed best deployment ensembles selected from
+the completed rolling prediction library:
+
+```yaml
+models:
+  pool: best_deployment_forward_ensembles
+```
+
+This expands to:
+
+- `corn_h1_forward_replacement_ap_hard_vote`
+- `corn_h2_forward_replacement_ba_hard_vote`
+
+These entries use `type: deployment_ensemble`. They are not raw-window
+estimators; they consume completed rolling prediction streams from the 57-model
+pool and aggregate them with the fixed forward-replacement weights selected in
+deployment discovery.
+
+For convenience, the combined pool is also available:
+
+```yaml
+models:
+  pool: official_57_plus_best_deployment
+```
+
+Use `scripts/run_best_deployment_combo.py` to evaluate the fixed H1/H2
+deployment ensembles from `all_rolling_predictions.csv`.
 
 ## Corn Configs
 

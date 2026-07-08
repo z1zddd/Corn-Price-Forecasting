@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from models.baseline import LastReturnBaseline, MeanDirectionBaseline
 from models.deep import DEEP_MODEL_NAMES, create_deep_model
+from models.deployment_ensemble import create_deployment_ensemble_model
 from models.loss_variants import (
     create_dual_head_mse_bce,
     create_focal_logistic,
@@ -31,6 +32,7 @@ MODEL_TYPE_ALIASES = {
     "xgboost": "xgboost",
     "catboost": "catboost",
     "official_pool": "official_pool",
+    "deployment_ensemble": "deployment_ensemble",
     "regression_mse_sign": "regression_mse_sign",
     "regression_mae_sign": "regression_mae_sign",
     "regression_huber_sign": "regression_huber_sign",
@@ -105,6 +107,8 @@ def create_model(model_config: dict | str):
         return create_catboost(params)
     if model_type == "official_pool":
         return create_official_pool_model(str(config.get("name")), params)
+    if model_type == "deployment_ensemble":
+        return create_deployment_ensemble_model(str(config.get("name")), params)
     if model_type == "regression_mse_sign":
         return create_regression_mse_sign(params)
     if model_type == "regression_mae_sign":

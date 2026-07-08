@@ -29,6 +29,10 @@ def write_experiment_report(
     out = Path(output_dir)
     if write_model_output:
         write_model_outputs(out, model_name, predictions, metrics)
+    try:
+        comparison_table = comparison.to_markdown(index=False)
+    except ImportError:
+        comparison_table = "```text\n" + comparison.to_string(index=False) + "\n```"
     comparison.to_csv(out / "comparison.csv", index=False)
     (out / "agent_verdict.json").write_text(json.dumps(verdict, ensure_ascii=False, indent=2), encoding="utf-8")
     if config is not None:
@@ -40,7 +44,7 @@ def write_experiment_report(
         "",
         "## Comparison",
         "",
-        comparison.to_markdown(index=False),
+        comparison_table,
         "",
         "## Verdict",
         "",
