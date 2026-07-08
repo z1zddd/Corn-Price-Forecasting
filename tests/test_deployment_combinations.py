@@ -72,6 +72,12 @@ def test_deployment_combination_cli_writes_best_candidate(tmp_path: Path):
                 "20",
                 "--min-candidate-coverage",
                 "1.0",
+                "--search-modes",
+                "exhaustive,forward,forward_replacement",
+                "--forward-max-k",
+                "4",
+                "--forward-tie-breakers",
+                "all",
                 "--engine",
                 engine,
             ],
@@ -86,8 +92,11 @@ def test_deployment_combination_cli_writes_best_candidate(tmp_path: Path):
         assert "results written" in result.stdout
         assert not leaderboard.empty
         assert set(leaderboard["search_protocol"]) == {"full_history_deployment_discovery"}
+        assert {"exhaustive", "forward", "forward_replacement"}.issubset(set(leaderboard["selection_mode"]))
         assert leaderboard["k"].max() >= 2
         assert best["search_protocol"] == "full_history_deployment_discovery"
+        assert best["selection_mode"] in {"exhaustive", "forward", "forward_replacement"}
+        assert best["candidate_weights"]
         assert len(best["selected_candidates"]) == best["k"]
         best_scores.append(float(leaderboard["BalancedAcc"].max()))
 

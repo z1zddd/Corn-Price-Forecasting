@@ -148,6 +148,20 @@ each requested pool, and evaluates multiple fixed deployment methods:
 - metric-weighted soft averaging;
 - metric-weighted soft averaging with full-history chosen threshold.
 
+For larger model libraries where exhaustive subset search is too expensive, the
+script also supports forward ensemble selection:
+
+- `forward`: greedy no-replacement ensemble selection over a scoped candidate
+  library.
+- `forward_replacement`: greedy ensemble selection with replacement. Repeated
+  selections become candidate weights, matching the common "ensemble selection
+  from libraries" deployment pattern.
+- `--forward-tie-breakers`: evaluates different greedy tie paths such as
+  `balanced` and `ba_only`; this matters because monthly samples are small and
+  many candidate additions can tie on balanced accuracy.
+- `--threshold-grid-size`: controls the quantile grid for
+  `*_best_threshold` aggregators.
+
 The pool scopes make the search model-aware rather than only rank-aware:
 
 - `all`: top streams regardless of metadata;
@@ -236,3 +250,58 @@ Current max-20 deployment candidates:
   `aeon_deep_mlp|news|lb12|h2|reg`,
   `svc_sigmoid|news|lb9|h2|cls`,
   `keras_lstm_stack2_u32|nonews|lb9|h2|cls`.
+
+A targeted forward-selection deployment discovery run over the full 684-stream
+library reached the 0.90 balanced-accuracy target for both horizons:
+
+```bash
+python scripts/search_deployment_combinations.py \
+  --predictions /path/to/all_rolling_predictions.csv \
+  --output-dir experiments/deployment_combo_forward_targeted \
+  --horizons 1,2 \
+  --rank-metrics ba \
+  --scopes all \
+  --aggregators hard_vote_strict,soft_mean_best_threshold \
+  --search-modes forward,forward_replacement \
+  --forward-max-k 80 \
+  --forward-candidate-limit 0 \
+  --forward-tie-breakers all \
+  --threshold-grid-size 81 \
+  --min-candidate-coverage 0.90 \
+  --bootstrap 0
+```
+
+| horizon | deployment discovery best | mode | BA | AUC | AP | DirAcc | k |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | `all_full684_by_ba` + `hard_vote_strict` | `forward_replacement`, `ba_only` tie path | 0.9231 | 0.9195 | 0.8931 | 0.9231 | 76 |
+| 2 | `all_full684_by_ba` + `hard_vote_strict` | `forward_replacement`, `balanced` tie path | 0.9432 | 0.9084 | 0.9550 | 0.9342 | 34 |
+
+Expanding only the ranking seed while keeping the same full-library hard-vote
+forward-replacement search improved horizon 1 further:
+
+```bash
+python scripts/search_deployment_combinations.py \
+  --predictions /path/to/all_rolling_predictions.csv \
+  --output-dir experiments/deployment_combo_forward_rankseeds \
+  --horizons 1,2 \
+  --rank-metrics ba,auc,ap,brier \
+  --scopes all \
+  --aggregators hard_vote_strict \
+  --search-modes forward,forward_replacement \
+  --forward-max-k 100 \
+  --forward-candidate-limit 0 \
+  --forward-tie-breakers all \
+  --threshold-grid-size 81 \
+  --min-candidate-coverage 0.90 \
+  --bootstrap 0
+```
+
+| horizon | deployment discovery best | ranking seed | mode | BA | AUC | AP | DirAcc | k |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | `all_full684_by_ap` + `hard_vote_strict` | AP | `forward_replacement`, `ba_only` tie path | 0.9359 | 0.9293 | 0.9072 | 0.9359 | 32 |
+| 2 | `all_full684_by_ba` + `hard_vote_strict` | BA | `forward_replacement`, `balanced` tie path | 0.9432 | 0.9084 | 0.9550 | 0.9342 | 34 |
+
+These are still `full_history_deployment_discovery` rows: they are appropriate
+for selecting an上线 candidate from the completed historical rolling prediction
+library, but they should be reported separately from strict walk-forward
+automatic model-selection scores.

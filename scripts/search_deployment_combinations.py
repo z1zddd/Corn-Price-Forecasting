@@ -68,6 +68,32 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--keep-top", type=int, default=500)
     parser.add_argument("--engine", choices=["python", "vectorized"], default="vectorized")
     parser.add_argument("--batch-size", type=int, default=50000)
+    parser.add_argument(
+        "--search-modes",
+        default="exhaustive",
+        help=(
+            "Comma-separated search modes: exhaustive, forward, forward_replacement, or all. "
+            "Forward modes run metric-optimized ensemble selection over broad candidate pools."
+        ),
+    )
+    parser.add_argument("--forward-max-k", type=int, default=80)
+    parser.add_argument(
+        "--forward-candidate-limit",
+        type=int,
+        default=0,
+        help="Top-N candidates per forward pool after ranking; 0 means use the full scoped pool.",
+    )
+    parser.add_argument(
+        "--threshold-grid-size",
+        type=int,
+        default=31,
+        help="Number of quantile thresholds to test for *_best_threshold aggregators.",
+    )
+    parser.add_argument(
+        "--forward-tie-breakers",
+        default="balanced",
+        help="Comma-separated forward tie-breakers: balanced, ba_only, or all.",
+    )
     parser.add_argument("--bootstrap", type=int, default=0)
     parser.add_argument("--ci-level", type=float, default=0.95)
     return parser.parse_args()
@@ -84,6 +110,7 @@ def main() -> None:
     rank_metrics = [value.strip() for value in str(args.rank_metrics).split(",") if value.strip()]
     scopes = {value.strip() for value in str(args.scopes).split(",") if value.strip()}
     args.enabled_aggregators = parse_aggregators(args.aggregators)
+    args.enabled_search_modes = parse_search_modes(args.search_modes)
 
     all_rows: list[dict] = []
     all_pool_rows: list[dict] = []
@@ -95,9 +122,22 @@ def main() -> None:
         candidate_scores = score_candidates(matrix)
         write_candidate_ranking(output_dir, horizon, matrix, candidate_scores)
         pools = build_pools(matrix["inventory"], candidate_scores, rank_metrics, pool_sizes, args.max_pool_size, scopes)
+        forward_pools = build_forward_pools(
+            matrix["inventory"],
+            candidate_scores,
+            rank_metrics,
+            int(args.forward_candidate_limit),
+            scopes,
+        )
         all_pool_rows.extend(pool_row(horizon, pool) for pool in pools)
-        print(f"[h{horizon}] searching {len(pools)} pools with engine={args.engine}", flush=True)
-        rows, predictions_by_method = search_horizon(matrix, pools, candidate_scores, args)
+        if args.enabled_search_modes.intersection({"forward", "forward_replacement"}):
+            all_pool_rows.extend(pool_row(horizon, pool) for pool in forward_pools)
+        print(
+            f"[h{horizon}] searching exhaustive_pools={len(pools)} forward_pools={len(forward_pools)} "
+            f"modes={','.join(sorted(args.enabled_search_modes))} engine={args.engine}",
+            flush=True,
+        )
+        rows, predictions_by_method = search_horizon(matrix, pools, forward_pools, candidate_scores, args)
         h_rows = pd.DataFrame(rows).sort_values(
             ["BalancedAcc", "AUC", "AP", "DirAcc", "n_predictions"],
             ascending=[False, False, False, False, False],
@@ -111,6 +151,7 @@ def main() -> None:
             "horizon": horizon,
             "method": best_name,
             "search_protocol": best_row["search_protocol"],
+            "selection_mode": best_row.get("selection_mode", "exhaustive"),
             "pool": best_row["pool"],
             "aggregator": best_row["aggregator"],
             "k": int(best_row["k"]),
@@ -120,6 +161,7 @@ def main() -> None:
             "AP": float(best_row["AP"]),
             "DirAcc": float(best_row["DirAcc"]),
             "selected_candidates": json.loads(best_row["selected_candidates"]),
+            "candidate_weights": json.loads(best_row.get("candidate_weights", "{}")),
         }
         best_prediction_payloads[horizon].to_csv(output_dir / f"h{horizon}_best_deployment_predictions.csv", index=False)
         (output_dir / f"h{horizon}_best_deployment_candidates.json").write_text(
@@ -205,6 +247,37 @@ def build_pools(
     return pools
 
 
+def build_forward_pools(
+    inventory: pd.DataFrame,
+    candidate_scores: dict[str, dict[str, float]],
+    rank_metrics: list[str],
+    candidate_limit: int,
+    requested_scopes: set[str],
+) -> list[Pool]:
+    info = inventory.set_index("candidate_id")
+    pools: list[Pool] = []
+    seen: set[tuple[str, tuple[str, ...]]] = set()
+    for metric in rank_metrics:
+        ranked_all = ranked_candidates(candidate_scores, metric)
+        for scope_name, scoped in scope_candidates(ranked_all, info, metric, candidate_scores).items():
+            if scope_name not in requested_scopes:
+                continue
+            if candidate_limit > 0:
+                selected = scoped[: min(candidate_limit, len(scoped))]
+                limit_label = f"top{len(selected)}"
+            else:
+                selected = list(scoped)
+                limit_label = f"full{len(selected)}"
+            if not selected:
+                continue
+            key = (f"{scope_name}_{limit_label}_by_{metric}", tuple(selected))
+            if key in seen:
+                continue
+            seen.add(key)
+            pools.append(Pool(name=key[0], rank_metric=metric, scope=scope_name, candidates=selected))
+    return pools
+
+
 def scope_candidates(
     ranked_all: list[str],
     info: pd.DataFrame,
@@ -256,12 +329,41 @@ def ranked_candidates(candidate_scores: dict[str, dict[str, float]], metric: str
 def search_horizon(
     matrix: dict,
     pools: list[Pool],
+    forward_pools: list[Pool],
     candidate_scores: dict[str, dict[str, float]],
     args: argparse.Namespace,
 ) -> tuple[list[dict], dict[str, pd.DataFrame]]:
-    if getattr(args, "engine", "vectorized") == "vectorized":
-        return search_horizon_vectorized(matrix, pools, candidate_scores, args)
-    return search_horizon_python(matrix, pools, candidate_scores, args)
+    rows: list[dict] = []
+    selected: dict[str, pd.DataFrame] = {}
+    modes = getattr(args, "enabled_search_modes", {"exhaustive"})
+    if "exhaustive" in modes:
+        if getattr(args, "engine", "vectorized") == "vectorized":
+            mode_rows, mode_selected = search_horizon_vectorized(matrix, pools, candidate_scores, args)
+        else:
+            mode_rows, mode_selected = search_horizon_python(matrix, pools, candidate_scores, args)
+        rows.extend(mode_rows)
+        selected.update(mode_selected)
+    if "forward" in modes:
+        mode_rows, mode_selected = search_forward_horizon(
+            matrix,
+            forward_pools,
+            candidate_scores,
+            args,
+            allow_replacement=False,
+        )
+        rows.extend(mode_rows)
+        selected.update(mode_selected)
+    if "forward_replacement" in modes:
+        mode_rows, mode_selected = search_forward_horizon(
+            matrix,
+            forward_pools,
+            candidate_scores,
+            args,
+            allow_replacement=True,
+        )
+        rows.extend(mode_rows)
+        selected.update(mode_selected)
+    return rows, selected
 
 
 def search_horizon_python(
@@ -340,7 +442,7 @@ def search_horizon_vectorized(
                 bit_matrix = masks_to_matrix(masks, len(candidates))
                 for aggregator in aggregators:
                     raw_scores = aggregate_score_batch(prob_arr, vote_arr, bit_matrix, candidates, aggregator, candidate_scores)
-                    scores, thresholds = apply_threshold_batch(raw_scores, y, aggregator)
+                    scores, thresholds = apply_threshold_batch(raw_scores, y, aggregator, int(args.threshold_grid_size))
                     sort_keys = quick_sort_arrays(y, scores)
                     best_idx = int(np.argmax(sort_keys[:, 0] * 1e9 + sort_keys[:, 1] * 1e6 + sort_keys[:, 2] * 1e3 + sort_keys[:, 3]))
                     key = (pool.name, aggregator, combo_size)
@@ -398,6 +500,85 @@ def search_horizon_vectorized(
     return rows, selected
 
 
+def search_forward_horizon(
+    matrix: dict,
+    pools: list[Pool],
+    candidate_scores: dict[str, dict[str, float]],
+    args: argparse.Namespace,
+    allow_replacement: bool,
+) -> tuple[list[dict], dict[str, pd.DataFrame]]:
+    rows: list[dict] = []
+    selected: dict[str, pd.DataFrame] = {}
+    y = matrix["base"]["actual_direction"].to_numpy(int)
+    returns = matrix["base"]["actual_return"].to_numpy(float)
+    mode_label = "forward_replacement" if allow_replacement else "forward"
+    max_k = int(args.forward_max_k)
+    for pool in pools:
+        candidates = pool.candidates
+        if not candidates:
+            continue
+        prob_arr = matrix["prob"][candidates].to_numpy(float)
+        vote_arr = matrix["vote"][candidates].to_numpy(float)
+        aggregators = selected_aggregators(pool.rank_metric, args)
+        print(
+            f"[h{matrix['horizon']}] {mode_label} pool={pool.name} "
+            f"candidates={len(candidates)} aggregators={','.join(aggregators)} max_k={max_k}",
+            flush=True,
+        )
+        for aggregator in aggregators:
+            values = vote_arr if aggregator.startswith("hard") else prob_arr
+            filled = np.nan_to_num(values, nan=0.0)
+            valid_values = np.isfinite(values).astype(float)
+            weights = aggregator_candidate_weights(candidates, aggregator, candidate_scores)
+            for tie_breaker in parse_forward_tie_breakers(args.forward_tie_breakers):
+                mode_pool = Pool(
+                    name=f"{mode_label}_{tie_breaker}_{pool.name}",
+                    rank_metric=pool.rank_metric,
+                    scope=pool.scope,
+                    candidates=pool.candidates,
+                )
+                numerator = np.zeros(values.shape[0], dtype=float)
+                denominator = np.zeros(values.shape[0], dtype=float)
+                remaining = np.arange(len(candidates), dtype=int)
+                selected_candidates: list[str] = []
+                steps = max_k if allow_replacement else min(max_k, len(candidates))
+                for _step in range(steps):
+                    trial_indices = np.arange(len(candidates), dtype=int) if allow_replacement else remaining
+                    if len(trial_indices) == 0:
+                        break
+                    trial_weights = weights[trial_indices]
+                    trial_num = numerator.reshape(1, -1) + filled[:, trial_indices].T * trial_weights.reshape(-1, 1)
+                    trial_den = denominator.reshape(1, -1) + valid_values[:, trial_indices].T * trial_weights.reshape(-1, 1)
+                    raw_scores = np.full(trial_num.shape, np.nan, dtype=float)
+                    np.divide(trial_num, trial_den, out=raw_scores, where=trial_den > 0)
+                    scores, thresholds = apply_threshold_batch(raw_scores, y, aggregator, int(args.threshold_grid_size))
+                    sort_keys = quick_sort_arrays(y, scores)
+                    scalar = forward_sort_scalar(sort_keys, tie_breaker)
+                    best_local = int(np.argmax(scalar))
+                    best_candidate_idx = int(trial_indices[best_local])
+                    best_weight = float(weights[best_candidate_idx])
+                    numerator += filled[:, best_candidate_idx] * best_weight
+                    denominator += valid_values[:, best_candidate_idx] * best_weight
+                    selected_candidates.append(candidates[best_candidate_idx])
+                    if not allow_replacement:
+                        remaining = remaining[remaining != best_candidate_idx]
+                    row, pred_df = result_payload(
+                        matrix,
+                        scores[best_local].copy(),
+                        float(thresholds[best_local]),
+                        list(selected_candidates),
+                        mode_pool,
+                        aggregator,
+                        args,
+                        returns,
+                        selection_mode=mode_label,
+                    )
+                    row["forward_tie_breaker"] = tie_breaker
+                    rows.append(row)
+                    selected[row["method"]] = pred_df
+    return rows, selected
+
+
 def deployment_aggregators(rank_metric: str) -> list[str]:
     return expand_aggregators(rank_metric, None)
 
@@ -407,6 +588,36 @@ def parse_aggregators(value: str) -> set[str] | None:
     if text == "all":
         return None
     return {item.strip() for item in text.split(",") if item.strip()}
+
+
+def parse_search_modes(value: str) -> set[str]:
+    text = str(value).strip().lower()
+    if text == "all":
+        return {"exhaustive", "forward", "forward_replacement"}
+    aliases = {
+        "greedy": "forward",
+        "forward_no_replacement": "forward",
+        "forward_with_replacement": "forward_replacement",
+        "ensemble_selection": "forward_replacement",
+    }
+    modes = {aliases.get(item.strip(), item.strip()) for item in text.split(",") if item.strip()}
+    valid = {"exhaustive", "forward", "forward_replacement"}
+    unknown = modes - valid
+    if unknown:
+        raise ValueError(f"Unknown search modes: {sorted(unknown)}")
+    return modes or {"exhaustive"}
+
+
+def parse_forward_tie_breakers(value: str) -> list[str]:
+    text = str(value).strip().lower()
+    if text == "all":
+        return ["balanced", "ba_only"]
+    breakers = [item.strip() for item in text.split(",") if item.strip()]
+    valid = {"balanced", "ba_only"}
+    unknown = sorted(set(breakers) - valid)
+    if unknown:
+        raise ValueError(f"Unknown forward tie-breakers: {unknown}")
+    return breakers or ["balanced"]
 
 
 def expand_aggregators(rank_metric: str, enabled: set[str] | None) -> list[str]:
@@ -468,6 +679,20 @@ def aggregate_score(
     denom = np.nansum(np.isfinite(base) * weights.reshape(1, -1), axis=1)
     out = np.full(base.shape[0], np.nan, dtype=float)
     return np.divide(np.nansum(weighted, axis=1), denom, out=out, where=denom > 0)
+
+
+def aggregator_candidate_weights(
+    candidates: list[str],
+    aggregator: str,
+    candidate_scores: dict[str, dict[str, float]],
+) -> np.ndarray:
+    if "_weighted_" not in aggregator:
+        return np.ones(len(candidates), dtype=float)
+    metric = aggregator.split("_weighted_", 1)[1].replace("_best_threshold", "")
+    weights = np.asarray([candidate_weight(candidate, metric, candidate_scores) for candidate in candidates], dtype=float)
+    if not np.isfinite(weights).all() or weights.sum() <= 0:
+        return np.ones(len(candidates), dtype=float)
+    return weights
 
 
 def mask_batches(n_candidates: int, combo_size: int, batch_size: int) -> Iterable[np.ndarray]:
@@ -551,7 +776,12 @@ def apply_threshold(raw_score: np.ndarray, y: np.ndarray, aggregator: str) -> tu
     return raw_score, 0.5
 
 
-def apply_threshold_batch(raw_scores: np.ndarray, y: np.ndarray, aggregator: str) -> tuple[np.ndarray, np.ndarray]:
+def apply_threshold_batch(
+    raw_scores: np.ndarray,
+    y: np.ndarray,
+    aggregator: str,
+    grid_size: int = 31,
+) -> tuple[np.ndarray, np.ndarray]:
     raw_scores = np.asarray(raw_scores, dtype=float)
     thresholds = np.full(raw_scores.shape[0], 0.5, dtype=float)
     if aggregator == "hard_vote_tie_up":
@@ -559,20 +789,20 @@ def apply_threshold_batch(raw_scores: np.ndarray, y: np.ndarray, aggregator: str
         scores[~np.isfinite(raw_scores)] = np.nan
         return scores, thresholds
     if aggregator.endswith("_best_threshold"):
-        thresholds = best_threshold_batch(y, raw_scores)
+        thresholds = best_threshold_batch(y, raw_scores, grid_size)
         scores = np.where(raw_scores > thresholds[:, None], 0.500001, 0.499999)
         scores[~np.isfinite(raw_scores)] = np.nan
         return scores, thresholds
     return raw_scores, thresholds
 
 
-def best_threshold_batch(y: np.ndarray, raw_scores: np.ndarray) -> np.ndarray:
+def best_threshold_batch(y: np.ndarray, raw_scores: np.ndarray, grid_size: int = 31) -> np.ndarray:
     valid = np.isfinite(raw_scores)
     thresholds = np.full(raw_scores.shape[0], 0.5, dtype=float)
     enough = valid.sum(axis=1) >= 2
     if not np.any(enough):
         return thresholds
-    qs = np.linspace(0.05, 0.95, 31)
+    qs = np.linspace(0.01, 0.99, max(3, int(grid_size)))
     quantiles = np.nanquantile(np.where(valid, raw_scores, np.nan), qs, axis=1).T
     best_ba = np.full(raw_scores.shape[0], -1.0, dtype=float)
     y_row = y.reshape(1, -1)
@@ -602,6 +832,12 @@ def quick_sort_arrays(y: np.ndarray, scores: np.ndarray) -> np.ndarray:
     return np.column_stack([ba, diracc, coverage, positive_rate_penalty])
 
 
+def forward_sort_scalar(sort_keys: np.ndarray, tie_breaker: str) -> np.ndarray:
+    if tie_breaker == "ba_only":
+        return sort_keys[:, 0]
+    return sort_keys[:, 0] * 1e9 + sort_keys[:, 1] * 1e6 + sort_keys[:, 2] * 1e3 + sort_keys[:, 3]
+
+
 def vector_balanced_accuracy(y_row: np.ndarray, pred: np.ndarray, valid: np.ndarray) -> np.ndarray:
     pos_mask = (y_row == 1) & valid
     neg_mask = (y_row == 0) & valid
@@ -626,6 +862,7 @@ def result_payload(
     aggregator: str,
     args: argparse.Namespace,
     returns: np.ndarray,
+    selection_mode: str = "exhaustive",
 ) -> tuple[dict, pd.DataFrame]:
     valid = np.isfinite(score)
     y = matrix["base"].loc[valid, "actual_direction"].to_numpy(int)
@@ -657,11 +894,17 @@ def result_payload(
         }
     )
     pred_df["equity"] = (1.0 + pred_df["strategy_return"]).cumprod()
+    candidate_counts = {candidate: selected_candidates.count(candidate) for candidate in dict.fromkeys(selected_candidates)}
+    candidate_weights = {
+        candidate: count / max(1, len(selected_candidates))
+        for candidate, count in candidate_counts.items()
+    }
     row = {
         "horizon": int(matrix["horizon"]),
         "method": method,
         "search_protocol": "full_history_deployment_discovery",
         "method_family": "deployment_fixed_combination",
+        "selection_mode": selection_mode,
         "pool": pool.name,
         "scope": pool.scope,
         "rank_metric": pool.rank_metric,
@@ -671,6 +914,7 @@ def result_payload(
         "coverage": float(valid.mean()),
         "n_predictions": int(valid.sum()),
         "selected_candidates": json.dumps(selected_candidates, ensure_ascii=False),
+        "candidate_weights": json.dumps(candidate_weights, ensure_ascii=False),
         **metrics,
     }
     return row, pred_df
@@ -742,6 +986,7 @@ def write_report(output_dir: Path, combined: pd.DataFrame, best_payloads: dict[i
                 "",
                 f"- Method: `{payload['method']}`",
                 f"- BA/AUC/AP/DirAcc: `{payload['BalancedAcc']:.4f}` / `{payload['AUC']:.4f}` / `{payload['AP']:.4f}` / `{payload['DirAcc']:.4f}`",
+                f"- Selection mode: `{payload.get('selection_mode', 'exhaustive')}`",
                 f"- Pool: `{payload['pool']}`",
                 f"- Aggregator: `{payload['aggregator']}`",
                 f"- k: `{payload['k']}`",
@@ -749,6 +994,12 @@ def write_report(output_dir: Path, combined: pd.DataFrame, best_payloads: dict[i
             ]
         )
         lines.extend(f"  - `{candidate}`" for candidate in payload["selected_candidates"])
+        if payload.get("candidate_weights"):
+            lines.extend(["", "- Candidate weights:"])
+            lines.extend(
+                f"  - `{candidate}`: `{weight:.4f}`"
+                for candidate, weight in payload["candidate_weights"].items()
+            )
         lines.append("")
     for horizon in sorted(combined["horizon"].unique()):
         top = combined.loc[combined["horizon"].eq(horizon)].head(20)
