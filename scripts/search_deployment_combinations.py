@@ -56,7 +56,18 @@ def parse_args() -> argparse.Namespace:
             "cls, reg, lb6, lb9, lb12, best_per_model, best_per_family, or family_<name>."
         ),
     )
+    parser.add_argument(
+        "--aggregators",
+        default="all",
+        help=(
+            "Comma-separated deployment aggregators. Use all, hard_vote_strict, hard_vote_tie_up, "
+            "soft_mean_fixed, soft_mean_best_threshold, hard_weighted, soft_weighted, "
+            "or soft_weighted_best_threshold. Weighted names expand with each pool rank metric."
+        ),
+    )
     parser.add_argument("--keep-top", type=int, default=500)
+    parser.add_argument("--engine", choices=["python", "vectorized"], default="vectorized")
+    parser.add_argument("--batch-size", type=int, default=50000)
     parser.add_argument("--bootstrap", type=int, default=0)
     parser.add_argument("--ci-level", type=float, default=0.95)
     return parser.parse_args()
@@ -72,6 +83,7 @@ def main() -> None:
     pool_sizes = sorted({int(value.strip()) for value in str(args.pool_sizes).split(",") if value.strip()})
     rank_metrics = [value.strip() for value in str(args.rank_metrics).split(",") if value.strip()]
     scopes = {value.strip() for value in str(args.scopes).split(",") if value.strip()}
+    args.enabled_aggregators = parse_aggregators(args.aggregators)
 
     all_rows: list[dict] = []
     all_pool_rows: list[dict] = []
@@ -84,6 +96,7 @@ def main() -> None:
         write_candidate_ranking(output_dir, horizon, matrix, candidate_scores)
         pools = build_pools(matrix["inventory"], candidate_scores, rank_metrics, pool_sizes, args.max_pool_size, scopes)
         all_pool_rows.extend(pool_row(horizon, pool) for pool in pools)
+        print(f"[h{horizon}] searching {len(pools)} pools with engine={args.engine}", flush=True)
         rows, predictions_by_method = search_horizon(matrix, pools, candidate_scores, args)
         h_rows = pd.DataFrame(rows).sort_values(
             ["BalancedAcc", "AUC", "AP", "DirAcc", "n_predictions"],
@@ -246,6 +259,17 @@ def search_horizon(
     candidate_scores: dict[str, dict[str, float]],
     args: argparse.Namespace,
 ) -> tuple[list[dict], dict[str, pd.DataFrame]]:
+    if getattr(args, "engine", "vectorized") == "vectorized":
+        return search_horizon_vectorized(matrix, pools, candidate_scores, args)
+    return search_horizon_python(matrix, pools, candidate_scores, args)
+
+
+def search_horizon_python(
+    matrix: dict,
+    pools: list[Pool],
+    candidate_scores: dict[str, dict[str, float]],
+    args: argparse.Namespace,
+) -> tuple[list[dict], dict[str, pd.DataFrame]]:
     rows_by_key: dict[tuple[str, str, int], tuple[tuple[float, float, float, float], Pool, str, list[str], np.ndarray, float]] = {}
     top_heap: list[tuple[tuple[float, float, float, float], int, Pool, str, list[str], np.ndarray, float]] = []
     counter = 0
@@ -257,7 +281,7 @@ def search_horizon(
         vote_arr = matrix["vote"][candidates].to_numpy(float)
         y = matrix["base"]["actual_direction"].to_numpy(int)
         returns = matrix["base"]["actual_return"].to_numpy(float)
-        aggregators = deployment_aggregators(pool.rank_metric)
+        aggregators = selected_aggregators(pool.rank_metric, args)
         for combo_size in range(1, len(candidates) + 1):
             for combo in itertools.combinations(range(len(candidates)), combo_size):
                 combo_candidates = [candidates[idx] for idx in combo]
@@ -292,7 +316,124 @@ def search_horizon(
     return rows, selected
 
 
+def search_horizon_vectorized(
+    matrix: dict,
+    pools: list[Pool],
+    candidate_scores: dict[str, dict[str, float]],
+    args: argparse.Namespace,
+) -> tuple[list[dict], dict[str, pd.DataFrame]]:
+    rows_by_key: dict[tuple[str, str, int], tuple[tuple[float, float, float, float], Pool, str, list[str], np.ndarray, float]] = {}
+    top_heap: list[tuple[tuple[float, float, float, float], int, Pool, str, list[str], np.ndarray, float]] = []
+    counter = 0
+    y = matrix["base"]["actual_direction"].to_numpy(int)
+    returns = matrix["base"]["actual_return"].to_numpy(float)
+    for pool in pools:
+        candidates = pool.candidates
+        if not candidates:
+            continue
+        prob_arr = matrix["prob"][candidates].to_numpy(float)
+        vote_arr = matrix["vote"][candidates].to_numpy(float)
+        aggregators = selected_aggregators(pool.rank_metric, args)
+        print(f"[h{matrix['horizon']}] pool={pool.name} candidates={len(candidates)} aggregators={','.join(aggregators)}", flush=True)
+        for combo_size in range(1, len(candidates) + 1):
+            for masks in mask_batches(len(candidates), combo_size, int(args.batch_size)):
+                bit_matrix = masks_to_matrix(masks, len(candidates))
+                for aggregator in aggregators:
+                    raw_scores = aggregate_score_batch(prob_arr, vote_arr, bit_matrix, candidates, aggregator, candidate_scores)
+                    scores, thresholds = apply_threshold_batch(raw_scores, y, aggregator)
+                    sort_keys = quick_sort_arrays(y, scores)
+                    best_idx = int(np.argmax(sort_keys[:, 0] * 1e9 + sort_keys[:, 1] * 1e6 + sort_keys[:, 2] * 1e3 + sort_keys[:, 3]))
+                    key = (pool.name, aggregator, combo_size)
+                    best_tuple = tuple(float(v) for v in sort_keys[best_idx])
+                    if key not in rows_by_key or best_tuple > rows_by_key[key][0]:
+                        selected_candidates = selected_from_mask(int(masks[best_idx]), candidates)
+                        rows_by_key[key] = (
+                            best_tuple,
+                            pool,
+                            aggregator,
+                            selected_candidates,
+                            scores[best_idx].copy(),
+                            float(thresholds[best_idx]),
+                        )
+                    top_count = min(int(args.keep_top), len(masks))
+                    scalar = sort_keys[:, 0] * 1e9 + sort_keys[:, 1] * 1e6 + sort_keys[:, 2] * 1e3 + sort_keys[:, 3]
+                    if top_count < len(masks):
+                        top_indices = np.argpartition(scalar, -top_count)[-top_count:]
+                    else:
+                        top_indices = np.arange(len(masks))
+                    for idx in top_indices:
+                        idx = int(idx)
+                        sort_tuple_value = tuple(float(v) for v in sort_keys[idx])
+                        selected_candidates = selected_from_mask(int(masks[idx]), candidates)
+                        payload = (
+                            sort_tuple_value,
+                            counter,
+                            pool,
+                            aggregator,
+                            selected_candidates,
+                            scores[idx].copy(),
+                            float(thresholds[idx]),
+                        )
+                        if len(top_heap) < args.keep_top:
+                            heapq.heappush(top_heap, payload)
+                        elif sort_tuple_value > top_heap[0][0]:
+                            heapq.heapreplace(top_heap, payload)
+                        counter += 1
+    selected: dict[str, pd.DataFrame] = {}
+    rows: list[dict] = []
+    payloads: list[tuple[Pool, str, list[str], np.ndarray, float]] = []
+    for _, pool, aggregator, combo_candidates, score, threshold in rows_by_key.values():
+        payloads.append((pool, aggregator, combo_candidates, score, threshold))
+    for _, _, pool, aggregator, combo_candidates, score, threshold in top_heap:
+        payloads.append((pool, aggregator, combo_candidates, score, threshold))
+    seen_methods: set[str] = set()
+    for pool, aggregator, combo_candidates, score, threshold in payloads:
+        method = method_name(pool, aggregator, combo_candidates)
+        if method in seen_methods:
+            continue
+        seen_methods.add(method)
+        row, pred_df = result_payload(matrix, score, threshold, combo_candidates, pool, aggregator, args, returns)
+        rows.append(row)
+        selected[row["method"]] = pred_df
+    return rows, selected
+
+
 def deployment_aggregators(rank_metric: str) -> list[str]:
+    return expand_aggregators(rank_metric, None)
+
+
+def parse_aggregators(value: str) -> set[str] | None:
+    text = str(value).strip().lower()
+    if text == "all":
+        return None
+    return {item.strip() for item in text.split(",") if item.strip()}
+
+
+def expand_aggregators(rank_metric: str, enabled: set[str] | None) -> list[str]:
+    specs = {
+        "hard_vote_strict": "hard_vote_strict",
+        "hard_vote_tie_up": "hard_vote_tie_up",
+        "soft_mean_fixed": "soft_mean_fixed",
+        "soft_mean_best_threshold": "soft_mean_best_threshold",
+        "hard_weighted": f"hard_weighted_{rank_metric}",
+        "soft_weighted": f"soft_weighted_{rank_metric}",
+        "soft_weighted_best_threshold": f"soft_weighted_{rank_metric}_best_threshold",
+    }
+    if enabled is None:
+        keys = list(specs)
+    else:
+        keys = [key for key in specs if key in enabled or specs[key] in enabled]
+    return [
+        specs[key]
+        for key in keys
+    ]
+
+
+def selected_aggregators(rank_metric: str, args: argparse.Namespace) -> list[str]:
+    return expand_aggregators(rank_metric, getattr(args, "enabled_aggregators", None))
+
+
+def all_deployment_aggregators(rank_metric: str) -> list[str]:
     return [
         "hard_vote_strict",
         "hard_vote_tie_up",
@@ -329,6 +470,62 @@ def aggregate_score(
     return np.divide(np.nansum(weighted, axis=1), denom, out=out, where=denom > 0)
 
 
+def mask_batches(n_candidates: int, combo_size: int, batch_size: int) -> Iterable[np.ndarray]:
+    batch: list[int] = []
+    for combo in itertools.combinations(range(n_candidates), combo_size):
+        mask = 0
+        for idx in combo:
+            mask |= 1 << idx
+        batch.append(mask)
+        if len(batch) >= batch_size:
+            yield np.asarray(batch, dtype=np.uint64)
+            batch = []
+    if batch:
+        yield np.asarray(batch, dtype=np.uint64)
+
+
+def masks_to_matrix(masks: np.ndarray, n_candidates: int) -> np.ndarray:
+    shifts = np.arange(n_candidates, dtype=np.uint64)
+    return (((masks[:, None] >> shifts[None, :]) & 1) > 0).astype(float)
+
+
+def selected_from_mask(mask: int, candidates: list[str]) -> list[str]:
+    return [candidate for idx, candidate in enumerate(candidates) if mask & (1 << idx)]
+
+
+def aggregate_score_batch(
+    prob_arr: np.ndarray,
+    vote_arr: np.ndarray,
+    bit_matrix: np.ndarray,
+    candidates: list[str],
+    aggregator: str,
+    candidate_scores: dict[str, dict[str, float]],
+) -> np.ndarray:
+    if aggregator.startswith("hard"):
+        values = vote_arr
+    else:
+        values = prob_arr
+    valid = np.isfinite(values).astype(float)
+    filled = np.nan_to_num(values, nan=0.0)
+    if "_weighted_" not in aggregator:
+        numerator = bit_matrix @ filled.T
+        denominator = bit_matrix @ valid.T
+    else:
+        metric = aggregator.split("_weighted_", 1)[1].replace("_best_threshold", "")
+        weights = np.asarray([candidate_weight(candidate, metric, candidate_scores) for candidate in candidates], dtype=float)
+        numerator = (bit_matrix * weights.reshape(1, -1)) @ filled.T
+        denominator = (bit_matrix * weights.reshape(1, -1)) @ valid.T
+    out = np.full(numerator.shape, np.nan, dtype=float)
+    return np.divide(numerator, denominator, out=out, where=denominator > 0)
+
+
+def candidate_weight(candidate: str, metric: str, candidate_scores: dict[str, dict[str, float]]) -> float:
+    score = candidate_scores[candidate].get(metric, 0.0)
+    if metric == "brier":
+        return 1.0 / max(1e-6, -score)
+    return max(1e-6, score - 0.5)
+
+
 def metric_weights(combo_candidates: list[str], metric: str, candidate_scores: dict[str, dict[str, float]]) -> np.ndarray:
     values = []
     for candidate in combo_candidates:
@@ -352,6 +549,72 @@ def apply_threshold(raw_score: np.ndarray, y: np.ndarray, aggregator: str) -> tu
         threshold = base_search.best_threshold(y, raw_score)
         return np.where(raw_score > threshold, 0.500001, 0.499999), float(threshold)
     return raw_score, 0.5
+
+
+def apply_threshold_batch(raw_scores: np.ndarray, y: np.ndarray, aggregator: str) -> tuple[np.ndarray, np.ndarray]:
+    raw_scores = np.asarray(raw_scores, dtype=float)
+    thresholds = np.full(raw_scores.shape[0], 0.5, dtype=float)
+    if aggregator == "hard_vote_tie_up":
+        scores = np.where(raw_scores >= 0.5, 0.500001, 0.499999)
+        scores[~np.isfinite(raw_scores)] = np.nan
+        return scores, thresholds
+    if aggregator.endswith("_best_threshold"):
+        thresholds = best_threshold_batch(y, raw_scores)
+        scores = np.where(raw_scores > thresholds[:, None], 0.500001, 0.499999)
+        scores[~np.isfinite(raw_scores)] = np.nan
+        return scores, thresholds
+    return raw_scores, thresholds
+
+
+def best_threshold_batch(y: np.ndarray, raw_scores: np.ndarray) -> np.ndarray:
+    valid = np.isfinite(raw_scores)
+    thresholds = np.full(raw_scores.shape[0], 0.5, dtype=float)
+    enough = valid.sum(axis=1) >= 2
+    if not np.any(enough):
+        return thresholds
+    qs = np.linspace(0.05, 0.95, 31)
+    quantiles = np.nanquantile(np.where(valid, raw_scores, np.nan), qs, axis=1).T
+    best_ba = np.full(raw_scores.shape[0], -1.0, dtype=float)
+    y_row = y.reshape(1, -1)
+    for col in range(quantiles.shape[1]):
+        threshold = quantiles[:, col]
+        pred = raw_scores > threshold[:, None]
+        ba = vector_balanced_accuracy(y_row, pred, valid)
+        improved = ba > best_ba
+        thresholds[improved] = threshold[improved]
+        best_ba[improved] = ba[improved]
+    thresholds[~np.isfinite(thresholds)] = 0.5
+    return thresholds
+
+
+def quick_sort_arrays(y: np.ndarray, scores: np.ndarray) -> np.ndarray:
+    valid = np.isfinite(scores)
+    pred = scores > 0.5
+    y_row = y.reshape(1, -1)
+    ba = vector_balanced_accuracy(y_row, pred, valid)
+    valid_counts = valid.sum(axis=1)
+    correct = ((pred == y_row) & valid).sum(axis=1)
+    diracc = np.divide(correct, valid_counts, out=np.zeros_like(ba), where=valid_counts > 0)
+    coverage = valid_counts.astype(float) / max(1, scores.shape[1])
+    pred_pos = np.divide((pred & valid).sum(axis=1), valid_counts, out=np.zeros_like(ba), where=valid_counts > 0)
+    actual_pos = np.divide(((y_row == 1) & valid).sum(axis=1), valid_counts, out=np.zeros_like(ba), where=valid_counts > 0)
+    positive_rate_penalty = -np.abs(pred_pos - actual_pos)
+    return np.column_stack([ba, diracc, coverage, positive_rate_penalty])
+
+
+def vector_balanced_accuracy(y_row: np.ndarray, pred: np.ndarray, valid: np.ndarray) -> np.ndarray:
+    pos_mask = (y_row == 1) & valid
+    neg_mask = (y_row == 0) & valid
+    pos = pos_mask.sum(axis=1).astype(float)
+    neg = neg_mask.sum(axis=1).astype(float)
+    tp = (pred & pos_mask).sum(axis=1).astype(float)
+    tn = ((~pred) & neg_mask).sum(axis=1).astype(float)
+    tpr = np.divide(tp, pos, out=np.zeros_like(tp), where=pos > 0)
+    tnr = np.divide(tn, neg, out=np.zeros_like(tn), where=neg > 0)
+    missing_class = (pos == 0) | (neg == 0)
+    ba = 0.5 * (tpr + tnr)
+    ba[missing_class] = 0.5
+    return ba
 
 
 def result_payload(

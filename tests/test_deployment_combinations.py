@@ -43,43 +43,52 @@ def _toy_predictions() -> pd.DataFrame:
 
 def test_deployment_combination_cli_writes_best_candidate(tmp_path: Path):
     predictions_path = tmp_path / "toy_predictions.csv"
-    output_dir = tmp_path / "deployment_search"
     _toy_predictions().to_csv(predictions_path, index=False)
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(Path(".").resolve())
-    result = subprocess.run(
-        [
-            sys.executable,
-            "scripts/search_deployment_combinations.py",
-            "--predictions",
-            str(predictions_path),
-            "--output-dir",
-            str(output_dir),
-            "--horizons",
-            "1",
-            "--max-pool-size",
-            "4",
-            "--pool-sizes",
-            "2,4",
-            "--rank-metrics",
-            "ba,brier",
-            "--keep-top",
-            "20",
-            "--min-candidate-coverage",
-            "1.0",
-        ],
-        check=True,
-        capture_output=True,
-        env=env,
-        text=True,
-    )
+    best_scores = []
+    for engine in ("python", "vectorized"):
+        output_dir = tmp_path / f"deployment_search_{engine}"
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/search_deployment_combinations.py",
+                "--predictions",
+                str(predictions_path),
+                "--output-dir",
+                str(output_dir),
+                "--horizons",
+                "1",
+                "--max-pool-size",
+                "4",
+                "--pool-sizes",
+                "2,4",
+                "--rank-metrics",
+                "ba,brier",
+                "--aggregators",
+                "hard_vote_strict,hard_vote_tie_up,soft_mean_fixed,hard_weighted",
+                "--keep-top",
+                "20",
+                "--min-candidate-coverage",
+                "1.0",
+                "--engine",
+                engine,
+            ],
+            check=True,
+            capture_output=True,
+            env=env,
+            text=True,
+        )
 
-    leaderboard = pd.read_csv(output_dir / "deployment_combination_leaderboard.csv")
-    best = json.loads((output_dir / "h1_best_deployment_candidates.json").read_text(encoding="utf-8"))
-    assert "results written" in result.stdout
-    assert not leaderboard.empty
-    assert set(leaderboard["search_protocol"]) == {"full_history_deployment_discovery"}
-    assert leaderboard["k"].max() >= 2
-    assert best["search_protocol"] == "full_history_deployment_discovery"
-    assert len(best["selected_candidates"]) == best["k"]
+        leaderboard = pd.read_csv(output_dir / "deployment_combination_leaderboard.csv")
+        best = json.loads((output_dir / "h1_best_deployment_candidates.json").read_text(encoding="utf-8"))
+        assert "results written" in result.stdout
+        assert not leaderboard.empty
+        assert set(leaderboard["search_protocol"]) == {"full_history_deployment_discovery"}
+        assert leaderboard["k"].max() >= 2
+        assert best["search_protocol"] == "full_history_deployment_discovery"
+        assert len(best["selected_candidates"]) == best["k"]
+        best_scores.append(float(leaderboard["BalancedAcc"].max()))
+
+    assert best_scores[0] == best_scores[1]

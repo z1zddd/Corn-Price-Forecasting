@@ -183,3 +183,56 @@ Current deployment candidates:
 The max-10 run still did not reach 0.90 balanced accuracy. A deeper max-16 or
 max-20 search can be run with the same script after the quick deployment
 candidate is reviewed.
+
+For deeper deployment discovery, the same script also supports a vectorized
+combination engine:
+
+```bash
+python scripts/search_deployment_combinations.py \
+  --predictions /path/to/all_rolling_predictions.csv \
+  --output-dir experiments/deployment_combination_search_max20_hard \
+  --horizons 1,2 \
+  --max-pool-size 20 \
+  --pool-sizes 10,12,15,20 \
+  --rank-metrics ba \
+  --scopes all,news,nonews,cls,reg,lb6,lb9,lb12,best_per_model,best_per_family \
+  --aggregators hard_vote_strict,hard_vote_tie_up,hard_weighted \
+  --min-candidate-coverage 0.90 \
+  --bootstrap 0 \
+  --engine vectorized \
+  --batch-size 50000
+```
+
+On the same corn long-lookback prediction pool, the vectorized max-20
+hard-vote/weighted search improved the deployment discovery candidates but
+still stayed below the 0.90 balanced-accuracy target:
+
+| horizon | deployment discovery best | BA | AUC | AP | DirAcc | k |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | `all_top20_by_ba` + `hard_vote_strict` | 0.8846 | 0.9004 | 0.8770 | 0.8846 | 12 |
+| 2 | `best_per_model_top20_by_ba` + `hard_vote_strict` | 0.8807 | 0.8874 | 0.8950 | 0.8816 | 10 |
+
+Current max-20 deployment candidates:
+
+- Horizon 1: `mlp_small_relu|news|lb6|h1|cls`,
+  `lightgbm_dart|news|lb12|h1|reg`,
+  `keras_lstm_u16|nonews|lb12|h1|cls`,
+  `keras_tcn_filters16_k2_d1|nonews|lb9|h1|reg`,
+  `svc_sigmoid|nonews|lb9|h1|cls`,
+  `keras_gru_u16|news|lb12|h1|reg`,
+  `extra_tree_entropy|news|lb9|h1|cls`,
+  `keras_tcn_filters16_k2_d1|news|lb9|h1|cls`,
+  `keras_tcn_filters8_k2_d1|nonews|lb9|h1|reg`,
+  `gaussian_nb|nonews|lb6|h1|cls`,
+  `aeon_deep_fcn|news|lb12|h1|reg`,
+  `keras_bilstm_u16|news|lb12|h1|cls`.
+- Horizon 2: `aeon_knn_euclidean|news|lb6|h2|reg`,
+  `aeon_deep_timecnn|news|lb12|h2|cls`,
+  `aeon_rise|nonews|lb6|h2|cls`,
+  `mlp_small_relu|news|lb12|h2|cls`,
+  `hist_gradient_boosting|nonews|lb6|h2|cls`,
+  `aeon_deep_fcn|news|lb12|h2|reg`,
+  `xgboost_dart|news|lb12|h2|cls`,
+  `aeon_deep_mlp|news|lb12|h2|reg`,
+  `svc_sigmoid|news|lb9|h2|cls`,
+  `keras_lstm_stack2_u32|nonews|lb9|h2|cls`.
