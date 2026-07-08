@@ -21,8 +21,8 @@ from config.loader import load_config
 from data.loader import load_commodity_csv, select_feature_columns
 from data.targets import add_forward_targets
 from data.windowing import make_windows
-from models.official_pool import OFFICIAL_57_MODEL_NAMES
-from models.registry import expand_model_configs
+from models.specs.official_57 import OFFICIAL_57_MODEL_NAMES
+from registry import expand_model_configs
 
 
 DEFAULT_CONFIGS = [

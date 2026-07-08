@@ -59,7 +59,7 @@ py-modules = ["cli"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["backtest*", "config*", "data*", "eval*", "models*", "report*", "train*"]
+include = ["backtest*", "config*", "data*", "ensembles*", "eval*", "losses*", "models*", "registry*", "report*", "train*", "wrappers*"]
 exclude = ["tests*", "docs*", "examples*", "configs*", "scripts*", "experiments*"]
 
 [tool.pytest.ini_options]
