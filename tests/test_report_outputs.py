@@ -4,10 +4,10 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from backtest.engine import run_backtest
-from config.loader import load_config
-from report.verdict import build_agent_verdict
-from report.writer import write_experiment_report
+from corn_forecast.pipeline.backtest.engine import run_backtest
+from corn_forecast.config.loader import load_config
+from corn_forecast.pipeline.report.verdict import build_agent_verdict
+from corn_forecast.pipeline.report.writer import write_experiment_report
 
 
 def test_agent_verdict_marks_invalid_constant_predictions():

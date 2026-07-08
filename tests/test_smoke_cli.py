@@ -14,7 +14,7 @@ def subprocess_env(tmp_path: Path) -> dict[str, str]:
 
 def test_cli_diagnose_runs(tmp_path: Path):
     result = subprocess.run(
-        [sys.executable, "-m", "cli", "diagnose", "--csv", "examples/corn/sample_data.csv", "--date-col", "date"],
+        [sys.executable, "-m", "corn_forecast.cli", "diagnose", "--csv", "examples/corn/sample_data.csv", "--date-col", "date"],
         check=True,
         capture_output=True,
         env=subprocess_env(tmp_path),
@@ -27,7 +27,7 @@ def test_cli_diagnose_runs(tmp_path: Path):
 
 def test_cli_diagnose_runs_from_config(tmp_path: Path):
     result = subprocess.run(
-        [sys.executable, "-m", "cli", "diagnose", "--config", "configs/corn.yaml"],
+        [sys.executable, "-m", "corn_forecast.cli", "diagnose", "--config", "configs/corn.yaml"],
         check=True,
         capture_output=True,
         env=subprocess_env(tmp_path),
@@ -45,7 +45,7 @@ def test_cli_run_writes_outputs(tmp_path: Path):
         [
             sys.executable,
             "-m",
-            "cli",
+            "corn_forecast.cli",
             "run",
             "--config",
             "configs/corn.yaml",

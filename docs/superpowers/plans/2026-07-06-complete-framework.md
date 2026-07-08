@@ -113,9 +113,9 @@
 - No source edits unless verification exposes a bug.
 
 - [ ] Run `python -m pytest -v`.
-- [ ] Run `python -m cli diagnose --config configs/corn.yaml`.
-- [ ] Run `python -m cli run --config configs/corn.yaml --output-dir experiments/complete_verify`.
-- [ ] Run `python -m cli run-lookbacks --config configs/corn.yaml --output-dir experiments/complete_lookbacks`.
+- [ ] Run `python -m corn_forecast.cli diagnose --config configs/corn.yaml`.
+- [ ] Run `python -m corn_forecast.cli run --config configs/corn.yaml --output-dir experiments/complete_verify`.
+- [ ] Run `python -m corn_forecast.cli run-lookbacks --config configs/corn.yaml --output-dir experiments/complete_lookbacks`.
 - [ ] Run `python scripts/run_corn_smoke.py`.
 - [ ] Check that generated output contains `comparison.csv`, `report.md`, `agent_verdict.json`, per-model predictions, rolling metrics, equity curve, rolling DirAcc chart, and rolling Sharpe chart.
 - [ ] Run `git status --short`.

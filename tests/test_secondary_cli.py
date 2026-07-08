@@ -30,7 +30,7 @@ def test_compare_and_interpret_commands(tmp_path: Path):
         [
             sys.executable,
             "-m",
-            "cli",
+            "corn_forecast.cli",
             "run",
             "--config",
             str(cfg_path),
@@ -44,14 +44,14 @@ def test_compare_and_interpret_commands(tmp_path: Path):
     )
 
     compare = subprocess.run(
-        [sys.executable, "-m", "cli", "compare", "--experiment", str(output_dir)],
+        [sys.executable, "-m", "corn_forecast.cli", "compare", "--experiment", str(output_dir)],
         check=True,
         capture_output=True,
         env=subprocess_env(tmp_path),
         text=True,
     )
     interpret = subprocess.run(
-        [sys.executable, "-m", "cli", "interpret", "--experiment", str(output_dir)],
+        [sys.executable, "-m", "corn_forecast.cli", "interpret", "--experiment", str(output_dir)],
         check=True,
         capture_output=True,
         env=subprocess_env(tmp_path),
@@ -70,7 +70,7 @@ def test_run_lookbacks_command(tmp_path: Path):
         [
             sys.executable,
             "-m",
-            "cli",
+            "corn_forecast.cli",
             "run-lookbacks",
             "--config",
             str(cfg_path),
@@ -99,7 +99,7 @@ def test_run_accepts_string_model_config(tmp_path: Path):
         [
             sys.executable,
             "-m",
-            "cli",
+            "corn_forecast.cli",
             "run",
             "--config",
             str(cfg_path),
@@ -118,7 +118,7 @@ def test_run_accepts_string_model_config(tmp_path: Path):
 
 def test_auto_window_command_recommends_settings(tmp_path: Path):
     result = subprocess.run(
-        [sys.executable, "-m", "cli", "auto-window", "--config", "configs/corn.yaml"],
+        [sys.executable, "-m", "corn_forecast.cli", "auto-window", "--config", "configs/corn.yaml"],
         check=True,
         capture_output=True,
         env=subprocess_env(tmp_path),
@@ -138,7 +138,7 @@ def test_build_config_command_writes_commodity_yaml(tmp_path: Path):
         [
             sys.executable,
             "-m",
-            "cli",
+            "corn_forecast.cli",
             "build-config",
             "--base-config",
             "configs/template.yaml",

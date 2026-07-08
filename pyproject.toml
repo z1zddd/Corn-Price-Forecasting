@@ -52,14 +52,11 @@ dev = [
 ]
 
 [project.scripts]
-commodity-backtest = "cli:main"
-
-[tool.setuptools]
-py-modules = ["cli"]
+commodity-backtest = "corn_forecast.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["backtest*", "config*", "data*", "ensembles*", "eval*", "losses*", "models*", "registry*", "report*", "train*", "wrappers*"]
+include = ["corn_forecast*"]
 exclude = ["tests*", "docs*", "examples*", "configs*", "scripts*", "experiments*"]
 
 [tool.pytest.ini_options]

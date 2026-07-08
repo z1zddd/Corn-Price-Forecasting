@@ -20,9 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from eval.metrics import compute_all_metrics  # noqa: E402
-from report.verdict import build_agent_verdict  # noqa: E402
-from report.writer import write_experiment_report, write_model_outputs  # noqa: E402
+from corn_forecast.pipeline.eval.metrics import compute_all_metrics  # noqa: E402
+from corn_forecast.pipeline.report.verdict import build_agent_verdict  # noqa: E402
+from corn_forecast.pipeline.report.writer import write_experiment_report, write_model_outputs  # noqa: E402
 
 
 @dataclass(frozen=True)

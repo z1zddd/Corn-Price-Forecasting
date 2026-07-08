@@ -4,8 +4,8 @@ import pytest
 
 pytest.importorskip("torch")
 
-from backtest.engine import run_backtest
-from models.registry import create_model
+from corn_forecast.pipeline.backtest.engine import run_backtest
+from corn_forecast.modeling.registry import create_model
 
 
 DEEP_MODEL_NAMES = ["lstm", "gru", "transformer", "patchtst", "itransformer", "dlinear", "dual_stream_lstm"]

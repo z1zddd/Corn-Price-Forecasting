@@ -5,14 +5,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from models.deployment_ensemble import (
+from corn_forecast.modeling.ensembles.deployment import (
     BEST_DEPLOYMENT_ENSEMBLE_SPECS,
     BEST_DEPLOYMENT_MODEL_POOL_NAME,
     DeploymentEnsembleSpec,
     BestDeploymentEnsemble,
     create_deployment_ensemble_model,
 )
-from models.registry import create_model, expand_model_configs
+from corn_forecast.modeling.registry import create_model, expand_model_configs
 
 
 def _toy_prediction_rows() -> pd.DataFrame:

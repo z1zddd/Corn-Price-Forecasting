@@ -17,34 +17,33 @@ YAML config
 ## Package Layout
 
 ```text
-
-  config/
-    loader.py       load YAML files
-    schema.py       validate required fields and temporal constraints
-  data/
-    loader.py       load CSVs with encoding fallback and select features
-    targets.py      derive future price, return, and direction targets
-    windowing.py    turn tabular rows into lookback windows
-    diagnosis.py    summarize dataset health
-  backtest/
-    splits.py       expanding, rolling, capped expanding windows
-    engine.py       config-driven experiment runner
-  models/
-    base.py         common model protocol
-    baseline.py     simple benchmark models
-    deep/           optional torch sequence classifiers
-    loss_variants.py benchmark layer-2 model adapters
-    sklearn_models.py
-    registry.py     YAML model factory
-  train/
-    trainer.py      compact torch training loop
-    losses.py       optional torch loss helpers
-  eval/
-    metrics.py      forecasting, trading, calibration, and CI metrics
-  report/
-    writer.py       CSV, JSON, Markdown, and chart outputs
-    verdict.py      conservative machine-readable result status
-  cli.py            command line entry point
+  corn_forecast/
+    cli.py          command line entry point
+    config/
+      loader.py     load YAML files
+      schema.py     validate required fields and temporal constraints
+    data/
+      loader.py     load CSVs with encoding fallback and select features
+      targets.py    derive future price, return, and direction targets
+      windowing.py  turn tabular rows into lookback windows
+      diagnosis.py  summarize dataset health
+    pipeline/
+      backtest/
+        splits.py   expanding, rolling, capped expanding windows
+        engine.py   config-driven experiment runner
+      train/        compact torch training and loss helpers
+      eval/         forecasting, trading, calibration, and CI metrics
+      report/       CSV, JSON, Markdown, chart outputs, and verdicts
+    modeling/
+      base.py       common model protocol
+      baselines/    simple benchmark models
+      classical/    sklearn-style and package-native tabular models
+      sequence/     optional torch sequence classifiers
+      specs/        model-pool specifications, including official 57
+      registry/     YAML model factory
+      losses/       benchmark layer-2 model adapters
+      wrappers/     shared third-party runtime adapters
+      ensembles/    deployment ensemble logic
 ```
 
 ## Backtest Flow
@@ -73,7 +72,7 @@ YAML config
 - optional torch sequence classifiers: `lstm`, `gru`, `transformer`, `patchtst`, `itransformer`, `dlinear`, and `dual_stream_lstm`
 - optional `lightgbm`, `xgboost`, and `catboost`
 
-New models should be added behind `models/registry.py` so the CLI remains YAML-driven.
+New models should be added behind `corn_forecast/modeling/registry/` so the CLI remains YAML-driven.
 
 Model configs can use either the original typed form:
 

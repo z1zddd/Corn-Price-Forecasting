@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 
-from data.loader import load_commodity_csv, select_feature_columns
-from data.targets import add_forward_targets
-from data.windowing import make_windows
+from corn_forecast.data.loader import load_commodity_csv, select_feature_columns
+from corn_forecast.data.targets import add_forward_targets
+from corn_forecast.data.windowing import make_windows
 
 
 def test_add_forward_targets_uses_price_col():
