@@ -11,6 +11,7 @@ from typing import Callable
 import joblib
 import numpy as np
 
+from models.deployment_ensemble import BEST_DEPLOYMENT_MODEL_POOL_NAME, deployment_ensemble_model_configs
 from models.sklearn_models import flatten_windows
 
 
@@ -199,9 +200,16 @@ def create_official_pool_model(model_name: str, params: dict | None = None) -> O
 def expand_model_pool(name: str) -> list[dict]:
     """Expand a named model pool into framework model configs."""
 
-    if name != "official_57":
-        raise ValueError(f"Unknown model pool: {name}")
-    return [{"name": model_name, "type": "official_pool", "enabled": True} for model_name in OFFICIAL_57_MODEL_NAMES]
+    if name == "official_57":
+        return [{"name": model_name, "type": "official_pool", "enabled": True} for model_name in OFFICIAL_57_MODEL_NAMES]
+    if name == BEST_DEPLOYMENT_MODEL_POOL_NAME:
+        return deployment_ensemble_model_configs()
+    if name == "official_57_plus_best_deployment":
+        return [
+            *[{"name": model_name, "type": "official_pool", "enabled": True} for model_name in OFFICIAL_57_MODEL_NAMES],
+            *deployment_ensemble_model_configs(),
+        ]
+    raise ValueError(f"Unknown model pool: {name}")
 
 
 def build_official_model_pool() -> list[OfficialPoolSpec]:

@@ -305,3 +305,33 @@ These are still `full_history_deployment_discovery` rows: they are appropriate
 for selecting an上线 candidate from the completed historical rolling prediction
 library, but they should be reported separately from strict walk-forward
 automatic model-selection scores.
+
+## Best Deployment Combo Runner
+
+After selecting the上线 ensemble, run the fixed best H1/H2 combination directly
+with:
+
+```bash
+python scripts/run_best_deployment_combo.py \
+  --predictions /path/to/all_rolling_predictions.csv \
+  --output-dir experiments/best_deployment_combo \
+  --horizons 1,2 \
+  --bootstrap 0
+```
+
+The runner uses the registered deployment model pool
+`best_deployment_forward_ensembles`, writes standard framework
+`model_outputs/`, and emits:
+
+- `best_deployment_combo_comparison.csv`
+- `deployment_ensemble_specs.json`
+- `deployment_ensemble_audit.csv`
+- `deployment_ensemble_candidate_audit.csv`
+
+On the corn long-lookback prediction pool this reproduces the selected
+deployment candidates:
+
+| model | horizon | BA | AUC | AP | DirAcc |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `corn_h1_forward_replacement_ap_hard_vote` | 1 | 0.9359 | 0.9293 | 0.9072 | 0.9359 |
+| `corn_h2_forward_replacement_ba_hard_vote` | 2 | 0.9432 | 0.9084 | 0.9550 | 0.9342 |

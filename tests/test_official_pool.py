@@ -1,5 +1,6 @@
 import numpy as np
 
+from models.deployment_ensemble import BEST_DEPLOYMENT_MODEL_POOL_NAME
 from models.official_pool import OFFICIAL_57_MODEL_NAMES, build_official_model_pool, expand_model_pool, format_input
 from models.registry import create_model, expand_model_configs
 
@@ -18,6 +19,17 @@ def test_official_pool_expands_to_framework_model_configs():
     assert expanded[0] == {"name": "ada_boost_tree", "type": "official_pool", "enabled": True}
     assert expanded[-1]["name"] == "xgboost_gbtree"
     assert expand_model_configs("official_57") == expanded
+
+
+def test_best_deployment_pool_expands_to_registered_ensemble_models():
+    expanded = expand_model_pool(BEST_DEPLOYMENT_MODEL_POOL_NAME)
+
+    assert [row["name"] for row in expanded] == [
+        "corn_h1_forward_replacement_ap_hard_vote",
+        "corn_h2_forward_replacement_ba_hard_vote",
+    ]
+    assert all(row["type"] == "deployment_ensemble" for row in expanded)
+    assert len(expand_model_pool("official_57_plus_best_deployment")) == 59
 
 
 def test_registry_creates_all_official_pool_adapters_without_optional_imports():
