@@ -3,9 +3,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from data.diagnosis import diagnose_frame
-from data.loader import load_commodity_csv
-from models.sklearn_models import SklearnClassifierAdapter
+from corn_forecast.data.diagnosis import diagnose_frame
+from corn_forecast.data.loader import load_commodity_csv
+from corn_forecast.modeling.classical.sklearn import SklearnClassifierAdapter
 
 
 def _gbk_text(raw: bytes) -> str:

@@ -1,6 +1,6 @@
 import numpy as np
 
-from eval.metrics import compute_all_metrics, compute_bootstrap_ci
+from corn_forecast.pipeline.eval.metrics import compute_all_metrics, compute_bootstrap_ci
 
 
 def test_compute_all_metrics_contains_required_keys():

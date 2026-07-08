@@ -2,12 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from config.loader import load_config
-from config.schema import validate_config
+from corn_forecast.config.loader import load_config
+from corn_forecast.config.schema import validate_config
 
 
 def test_cli_imports():
-    import cli
+    from corn_forecast import cli
 
     assert callable(cli.main)
 

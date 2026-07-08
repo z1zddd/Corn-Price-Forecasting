@@ -81,9 +81,9 @@
 - No source edits unless verification finds a real bug.
 
 - [ ] Run `python -m pytest -v`.
-- [ ] Run `python -m cli diagnose --config configs/corn.yaml`.
-- [ ] Run `python -m cli run --config configs/corn.yaml --output-dir experiments/integration_verify`.
-- [ ] Run `python -m cli run-lookbacks --config configs/corn.yaml --output-dir experiments/integration_lookbacks`.
+- [ ] Run `python -m corn_forecast.cli diagnose --config configs/corn.yaml`.
+- [ ] Run `python -m corn_forecast.cli run --config configs/corn.yaml --output-dir experiments/integration_verify`.
+- [ ] Run `python -m corn_forecast.cli run-lookbacks --config configs/corn.yaml --output-dir experiments/integration_lookbacks`.
 - [ ] Verify expected output files exist.
 - [ ] Run `git status --short`.
 - [ ] Commit any verification fixes with a focused message.

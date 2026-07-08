@@ -4,8 +4,8 @@ import pandas as pd
 import pytest
 import yaml
 
-from backtest.engine import run_backtest
-from data.scaler import SequenceStandardizer
+from corn_forecast.pipeline.backtest.engine import run_backtest
+from corn_forecast.data.scaler import SequenceStandardizer
 
 
 def test_sequence_standardizer_fits_train_only_statistics():

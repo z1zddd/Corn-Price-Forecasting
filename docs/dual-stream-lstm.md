@@ -39,7 +39,7 @@ commodity-backtest run --config configs/corn_dual_stream_lstm.yaml --output-dir 
 如果不想安装命令行入口，也可以用 Python 模块方式：
 
 ```bash
-python -m cli run --config configs/corn_dual_stream_lstm.yaml --output-dir experiments/corn_dual_stream_lstm
+python -m corn_forecast.cli run --config configs/corn_dual_stream_lstm.yaml --output-dir experiments/corn_dual_stream_lstm
 ```
 
 结果会写入：

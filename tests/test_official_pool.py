@@ -1,8 +1,8 @@
 import numpy as np
 
-from models.deployment_ensemble import BEST_DEPLOYMENT_MODEL_POOL_NAME
-from models.official_pool import OFFICIAL_57_MODEL_NAMES, build_official_model_pool, expand_model_pool, format_input
-from models.registry import create_model, expand_model_configs
+from corn_forecast.modeling.ensembles.deployment import BEST_DEPLOYMENT_MODEL_POOL_NAME
+from corn_forecast.modeling.specs.official import OFFICIAL_57_MODEL_NAMES, build_official_model_pool, expand_model_pool, format_input
+from corn_forecast.modeling.registry import create_model, expand_model_configs
 
 
 def test_official_pool_has_expected_57_names():

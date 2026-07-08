@@ -43,18 +43,19 @@ commodity-backtest interpret --experiment experiments/manual_run
 ## 项目结构
 
 ```text
-backtest/    时间序列回测窗口和实验执行
-config/      YAML 配置读取与校验
-data/        CSV 读取、目标生成、特征选择和窗口构造代码
-eval/        预测指标、交易指标和置信区间
-models/      基线模型、随机森林、损失变体和可选深度模型
-report/      报告、图表和结果判断
-train/       PyTorch 训练辅助代码
-cli.py       命令行入口
-configs/     示例配置
-examples/    示例数据
-local_data/  本地原始数据目录，默认不提交到 git
-tests/       自动化测试
+corn_forecast/          框架主包
+  cli.py                命令行入口
+  config/               YAML 配置读取与校验
+  data/                 CSV 读取、目标生成、特征选择和窗口构造
+  pipeline/             回测、训练、评估和报告流程
+  modeling/             模型、模型池、损失变体、registry、wrapper 和 ensemble
+configs/                示例和官方实验配置
+examples/               示例数据
+datasets/               小型仓库内数据资产
+scripts/                实验、搜索、验证和维护脚本
+docs/                   架构、配置和实验说明
+tests/                  自动化测试
+local_data/             本地原始数据目录，默认不提交到 git
 ```
 
 ## 输出结构

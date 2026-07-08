@@ -5,8 +5,8 @@ import pandas as pd
 import pytest
 import yaml
 
-from backtest.engine import run_backtest
-from models.registry import create_model
+from corn_forecast.pipeline.backtest.engine import run_backtest
+from corn_forecast.modeling.registry import create_model
 
 
 def small_windows():

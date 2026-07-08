@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from models.registry import create_model
+from corn_forecast.modeling.registry import create_model
 
 
 def test_last_return_baseline_predicts_last_feature_change():

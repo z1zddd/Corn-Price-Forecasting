@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from eval.metrics import compute_all_metrics  # noqa: E402
+from corn_forecast.pipeline.eval.metrics import compute_all_metrics  # noqa: E402
 from scripts import search_deployment_combinations as deploy_search  # noqa: E402
 from scripts import search_prediction_ensembles as base_search  # noqa: E402
 

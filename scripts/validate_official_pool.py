@@ -15,14 +15,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backtest.engine import run_backtest
-from backtest.splits import make_backtest_windows
-from config.loader import load_config
-from data.loader import load_commodity_csv, select_feature_columns
-from data.targets import add_forward_targets
-from data.windowing import make_windows
-from models.specs.official import OFFICIAL_57_MODEL_NAMES
-from registry import expand_model_configs
+from corn_forecast.pipeline.backtest.engine import run_backtest
+from corn_forecast.pipeline.backtest.splits import make_backtest_windows
+from corn_forecast.config.loader import load_config
+from corn_forecast.data.loader import load_commodity_csv, select_feature_columns
+from corn_forecast.data.targets import add_forward_targets
+from corn_forecast.data.windowing import make_windows
+from corn_forecast.modeling.specs.official import OFFICIAL_57_MODEL_NAMES
+from corn_forecast.modeling.registry import expand_model_configs
 
 
 DEFAULT_CONFIGS = [
