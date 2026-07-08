@@ -8,8 +8,15 @@ It expands to the 57 model names completed in the long-lookback corn spike run:
 - aeon time-series models: MiniRocket, MultiRocket, interval forests, Catch22/Summary, RDST, KNN-DTW/Euclidean, and aeon deep classifiers/regressors
 - Keras sequence models: LSTM, GRU, BiLSTM, and TCN variants built from official TensorFlow/Keras layers
 
-The registry expands the pool through `models.official_pool.expand_model_pool`.
+The registry expands the pool through `models.specs.official.expand_model_pool`.
 Each entry uses `type: official_pool`, which creates an adapter around the official package estimator classes. Optional dependencies are loaded only when a model is fitted.
+
+The implementation is split under `models/specs/official/`:
+
+- `tabular/`: sklearn, LightGBM, XGBoost, and CatBoost specs grouped by model family
+- `aeon/`: one file per complex aeon method such as MiniRocket, RDST, and InceptionTime
+- `keras/`: one file per Keras sequence method such as LSTM, GRU, BiLSTM, and TCN
+- `adapter.py`, `pool.py`, `base.py`, and `io.py`: shared adapter, pool assembly, declarations, and input conversion
 
 ## Best Deployment Ensemble Pool
 

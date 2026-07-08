@@ -19,7 +19,7 @@ from models.classical.sklearn import (
     create_xgboost,
 )
 from models.sequence import DEEP_MODEL_NAMES, create_deep_model
-from models.specs.official_57 import create_official_pool_model, expand_model_pool
+from models.specs.official import create_official_pool_model, expand_model_pool
 
 
 MODEL_TYPE_ALIASES = {
