@@ -54,6 +54,17 @@ def test_bootstrap_ci_is_deterministic():
     assert len(ci1["Sharpe_CI"]) == 2
 
 
+def test_compute_all_metrics_allows_zero_bootstrap():
+    y_true = np.array([1, 0, 1, 0])
+    y_prob = np.array([0.9, 0.2, 0.4, 0.3])
+    returns = np.array([0.02, -0.01, 0.03, -0.02])
+
+    metrics = compute_all_metrics(y_true, y_prob, returns, n_bootstrap=0)
+
+    assert metrics["n_bootstrap"] == 0
+    assert metrics["DirAcc_CI"] == [metrics["DirAcc"], metrics["DirAcc"]]
+
+
 def test_compute_all_metrics_includes_r2_health_for_regression_head():
     y_true = np.array([1, 0, 1, 0])
     y_prob = np.array([0.9, 0.2, 0.8, 0.1])

@@ -80,3 +80,106 @@ diagnostics and framework checks, but because those candidate sets were chosen
 after seeing completed rolling results, they should be described as fixed
 post-hoc aggregates rather than a fully automatic no-leakage model-selection
 procedure.
+
+## Post-Hoc Aggregate Audit
+
+`scripts/run_best_aggregate_from_predictions.py` rebuilds the earlier fixed
+`top6_h1` and `top6_h2` hard-vote checks inside the framework. These rows should
+be read as signal diagnostics, not as formal automatic model-selection results:
+
+- The base model predictions are still rolling out-of-sample predictions.
+- The fixed top6 stream sets were selected after inspecting the completed
+  rolling result pool, so the stream-selection step is post-hoc.
+- The script writes `selection_protocol=post_hoc_fixed_stream_set` into the
+  comparison table and report config.
+- `aggregate_audit.csv` records the aggregate candidate count, evaluation
+  start/end, and any incomplete early calendar rows dropped before scoring.
+- `aggregate_candidate_audit.csv` records each member stream and its own target
+  month coverage.
+
+For the corn long-lookback pool, the fixed hard-vote checks were:
+
+| aggregate | role | balanced accuracy | evaluated target months |
+| --- | --- | ---: | --- |
+| `top6_h1_hard_vote` | post-hoc signal diagnostic | 0.7657 | 2020-07 to 2026-06 |
+| `top6_h2_hard_vote` | post-hoc signal diagnostic | 0.7122 | 2020-09 to 2026-06 |
+
+They are useful for understanding whether strong streams can reinforce each
+other, but they should be reported separately from
+`valid_walk_forward_leaderboard.csv`, where every month chooses/ranks/weights
+models using only earlier target months.
+
+## Deployment Selection Search
+
+When the task is to choose a fixed combination for future deployment, use
+`scripts/search_deployment_combinations.py`. This script keeps a separate
+protocol label:
+
+`search_protocol=full_history_deployment_discovery`
+
+This means the completed historical rolling prediction pool is used as the
+model-selection data. That is the appropriate mode for choosing an上线 candidate
+from all evidence available today, but it is not the same as a strict
+walk-forward validation score.
+
+Example:
+
+```bash
+python scripts/search_deployment_combinations.py \
+  --predictions /path/to/all_rolling_predictions.csv \
+  --output-dir experiments/deployment_combination_search \
+  --horizons 1,2 \
+  --max-pool-size 10 \
+  --pool-sizes 6,8,10 \
+  --rank-metrics ba,brier,auc,ap \
+  --scopes all,news,nonews,cls,reg,lb6,lb9,lb12,best_per_model,best_per_family \
+  --min-candidate-coverage 0.90 \
+  --bootstrap 0
+```
+
+The search traverses every combination size from `k=1` to the pool size for
+each requested pool, and evaluates multiple fixed deployment methods:
+
+- hard strict voting, equivalent to positive only when vote share is `> 0.5`;
+- hard tie-up voting, where ties become positive;
+- soft probability mean with fixed threshold;
+- soft probability mean with full-history chosen threshold;
+- metric-weighted hard voting;
+- metric-weighted soft averaging;
+- metric-weighted soft averaging with full-history chosen threshold.
+
+The pool scopes make the search model-aware rather than only rank-aware:
+
+- `all`: top streams regardless of metadata;
+- `news` / `nonews`: with or without precomputed news PCA features;
+- `cls` / `reg`: classification or regression heads;
+- `lb6` / `lb9` / `lb12`: lookback-specific pools;
+- `best_per_model`: avoid duplicate variants from the same base model;
+- `best_per_family`: choose one strong stream per model family before
+  combination.
+
+On the corn long-lookback prediction pool, the max-10 deployment discovery run
+found stronger fixed combinations than the earlier hand-picked top6 checks:
+
+| horizon | deployment discovery best | BA | AUC | AP | DirAcc | k |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | `all_top8_by_ba` + `hard_vote_strict` | 0.8462 | 0.8794 | 0.8395 | 0.8462 | 6 |
+| 2 | `best_per_family_top10_by_ba` + `hard_weighted_ba` | 0.8423 | 0.8349 | 0.8876 | 0.8421 | 5 |
+
+Current deployment candidates:
+
+- Horizon 1: `mlp_small_relu|news|lb6|h1|cls`,
+  `sgd_modified_huber|news|lb6|h1|cls`,
+  `lightgbm_dart|news|lb12|h1|reg`,
+  `keras_tcn_filters16_k2_d1|nonews|lb9|h1|reg`,
+  `svc_sigmoid|nonews|lb9|h1|cls`,
+  `aeon_deep_mlp|nonews|lb9|h1|reg`.
+- Horizon 2: `aeon_knn_euclidean|news|lb6|h2|reg`,
+  `aeon_deep_timecnn|news|lb12|h2|cls`,
+  `mlp_small_relu|news|lb12|h2|cls`,
+  `hist_gradient_boosting|nonews|lb6|h2|cls`,
+  `svc_sigmoid|news|lb9|h2|cls`.
+
+The max-10 run still did not reach 0.90 balanced accuracy. A deeper max-16 or
+max-20 search can be run with the same script after the quick deployment
+candidate is reviewed.

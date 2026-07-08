@@ -98,6 +98,7 @@ def build_candidate_matrix(predictions: pd.DataFrame, name: str, candidates: lis
     """Align candidate predictions by calendar target and add vote columns."""
 
     frames = []
+    candidate_audit: list[dict] = []
     for candidate in candidates:
         mask = (
             predictions["model"].eq(candidate.model)
@@ -110,6 +111,15 @@ def build_candidate_matrix(predictions: pd.DataFrame, name: str, candidates: lis
         if part.empty:
             raise ValueError(f"Missing candidate stream for {candidate.cid}")
         part["candidate_id"] = candidate.cid
+        candidate_audit.append(
+            {
+                "ensemble": name,
+                "candidate_id": candidate.cid,
+                "rows": int(len(part)),
+                "first_target_month": str(pd.to_datetime(part["target_month"]).min().date()),
+                "last_target_month": str(pd.to_datetime(part["target_month"]).max().date()),
+            }
+        )
         frames.append(part)
 
     aligned = pd.concat(frames, ignore_index=True)
@@ -124,12 +134,30 @@ def build_candidate_matrix(predictions: pd.DataFrame, name: str, candidates: lis
     vote_cols = [f"vote::{candidate.cid}" for candidate in candidates]
     present = base[vote_cols].notna().sum(axis=1)
     dropped = int((present != expected).sum())
+    raw_calendar_rows = int(len(base))
     if dropped:
         print(f"[warn] {name}: dropping {dropped} incomplete early calendar rows")
         base = base.loc[present == expected].copy()
     base["anchor_month"] = pd.to_datetime(base["anchor_month"])
     base["target_month"] = pd.to_datetime(base["target_month"])
-    return base.sort_values(["anchor_month", "target_month"]).reset_index(drop=True)
+    base = base.sort_values(["anchor_month", "target_month"]).reset_index(drop=True)
+    base.attrs["audit"] = {
+        "ensemble": name,
+        "selection_protocol": "post_hoc_fixed_stream_set",
+        "selection_note": (
+            "Candidate streams are fixed by prior completed-result inspection; "
+            "use this as a diagnostic/framework check, not as an automatic no-leakage model-selection result."
+        ),
+        "candidate_count": expected,
+        "raw_calendar_rows": raw_calendar_rows,
+        "complete_calendar_rows": int(len(base)),
+        "dropped_incomplete_calendar_rows": dropped,
+        "first_target_month": str(base["target_month"].min().date()) if not base.empty else "",
+        "last_target_month": str(base["target_month"].max().date()) if not base.empty else "",
+        "candidate_ids": [candidate.cid for candidate in candidates],
+        "candidate_audit": candidate_audit,
+    }
+    return base
 
 
 def aggregate_predictions(name: str, base: pd.DataFrame, candidates: list[Candidate]) -> tuple[pd.DataFrame, dict]:
@@ -173,6 +201,10 @@ def aggregate_predictions(name: str, base: pd.DataFrame, candidates: list[Candid
     )
     metrics["candidate_count"] = len(candidates)
     metrics["rule"] = "hard_vote_strict_gt_0.5"
+    metrics["selection_protocol"] = "post_hoc_fixed_stream_set"
+    metrics["evaluation_start"] = str(base["target_month"].min().date()) if not base.empty else ""
+    metrics["evaluation_end"] = str(base["target_month"].max().date()) if not base.empty else ""
+    metrics["dropped_incomplete_calendar_rows"] = int(base.attrs.get("audit", {}).get("dropped_incomplete_calendar_rows", 0))
     return predictions, metrics
 
 
@@ -228,10 +260,27 @@ def write_outputs(output_dir: Path, comparison: pd.DataFrame, model_payloads: di
         config={
             "source": "rolling base predictions",
             "aggregate_rule": "hard vote: positive when vote share > 0.5",
-            "note": "Base predictions are already out-of-sample rolling predictions.",
+            "selection_protocol": "post_hoc_fixed_stream_set",
+            "note": (
+                "Base predictions are already out-of-sample rolling predictions. "
+                "The top6 stream sets are fixed post-hoc diagnostics and must not be mixed "
+                "with fully automatic walk-forward model-selection leaderboards."
+            ),
         },
         write_model_output=False,
     )
+
+
+def write_aggregate_audit(output_dir: Path, aggregate_audits: list[dict]) -> None:
+    """Write a compact audit that keeps post-hoc aggregates separate from formal searches."""
+
+    rows: list[dict] = []
+    candidate_rows: list[dict] = []
+    for audit in aggregate_audits:
+        rows.append({key: value for key, value in audit.items() if key not in {"candidate_ids", "candidate_audit"}})
+        candidate_rows.extend(audit["candidate_audit"])
+    pd.DataFrame(rows).to_csv(output_dir / "aggregate_audit.csv", index=False)
+    pd.DataFrame(candidate_rows).to_csv(output_dir / "aggregate_candidate_audit.csv", index=False)
 
 
 def main() -> None:
@@ -243,8 +292,10 @@ def main() -> None:
 
     model_payloads: dict[str, tuple[pd.DataFrame, dict]] = {}
     rows: list[dict] = []
+    aggregate_audits: list[dict] = []
     for name, candidates in [("top6_h1_hard_vote", H1_CANDIDATES), ("top6_h2_hard_vote", H2_CANDIDATES)]:
         base = build_candidate_matrix(predictions, name, candidates)
+        aggregate_audits.append(base.attrs["audit"])
         pred_df, metrics = aggregate_predictions(name, base, candidates)
         model_payloads[name] = (pred_df, metrics)
         rows.append({"model": name, "group": "hard_vote_ensemble", **metrics})
@@ -252,10 +303,13 @@ def main() -> None:
     rows.extend(single_candidate_metrics(predictions, H1_CANDIDATES + H2_CANDIDATES, ARGS.bootstrap, ARGS.ci_level))
     comparison = pd.DataFrame(rows).sort_values(["BalancedAcc", "DirAcc", "ProfitFactor", "Sharpe"], ascending=False)
     write_outputs(output_dir, comparison, model_payloads)
+    write_aggregate_audit(output_dir, aggregate_audits)
     comparison.to_csv(output_dir / "best_aggregate_comparison.csv", index=False)
     (output_dir / "candidate_sets.json").write_text(
         json.dumps(
             {
+                "selection_protocol": "post_hoc_fixed_stream_set",
+                "warning": "These fixed top6 sets were chosen after inspecting completed rolling results.",
                 "top6_h1": [candidate.cid for candidate in H1_CANDIDATES],
                 "top6_h2": [candidate.cid for candidate in H2_CANDIDATES],
             },
