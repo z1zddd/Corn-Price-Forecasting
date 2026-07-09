@@ -1,0 +1,9 @@
+name: hist_gradient_boosting
+class_path: src.models.classical.sklearn_models.HistGradientBoostingModel
+task: classification
+params:
+  max_iter: 200
+  learning_rate: 0.03
+  max_leaf_nodes: 15
+  l2_regularization: 0.01
+  random_state: 42

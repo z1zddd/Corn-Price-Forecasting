@@ -1,3 +1,0 @@
-model,selection_protocol,selection_mode,ranking_seed,forward_tie_breaker,aggregator,selected_count,unique_candidate_count,raw_calendar_rows,scored_calendar_rows,dropped_no_score_calendar_rows,first_target_month,last_target_month
-corn_h1_forward_replacement_ap_hard_vote,full_history_deployment_discovery,forward_replacement,ap,ba_only,hard_vote_strict,32,23,78,78,0,2020-01-01,2026-06-01
-corn_h2_forward_replacement_ba_hard_vote,full_history_deployment_discovery,forward_replacement,ba,balanced,hard_vote_strict,34,23,76,76,0,2020-03-01,2026-06-01

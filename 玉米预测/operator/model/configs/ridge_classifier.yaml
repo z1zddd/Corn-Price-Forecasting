@@ -1,0 +1,7 @@
+name: ridge_classifier
+class_path: src.models.classical.sklearn_models.RidgeClassifierModel
+task: classification
+params:
+  alpha: 1.0
+  class_weight: balanced
+  random_state: 42

@@ -1,0 +1,5 @@
+name: gaussian_nb
+class_path: src.models.classical.sklearn_models.GaussianNBModel
+task: classification
+params:
+  var_smoothing: 0.000000001

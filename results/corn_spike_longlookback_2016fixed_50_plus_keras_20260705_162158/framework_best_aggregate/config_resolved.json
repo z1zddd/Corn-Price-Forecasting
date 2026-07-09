@@ -1,5 +1,0 @@
-{
-  "source": "rolling base predictions",
-  "aggregate_rule": "hard vote: positive when vote share > 0.5",
-  "note": "Base predictions are already out-of-sample rolling predictions."
-}

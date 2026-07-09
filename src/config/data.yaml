@@ -1,0 +1,23 @@
+csv_path: 玉米预测/datasets/raw/corn_daily_enriched.csv
+series_id: corn
+date_col: date
+price_col: dce_corn_close
+feature_cols:
+  - dce_corn_close
+  - dce_corn_volume
+  - dce_corn_open_interest
+  - dce_corn_starch_close
+  - domestic_corn_spot_price_cny_t
+  - corn_basis_cny_t
+  - cbot_corn_close
+  - cbot_wheat_close
+  - ne_avg_precip_mm
+  - ne_avg_t2m_c
+seq_len: 30
+horizon: 30
+include_today: true
+target_mode: return
+split_method: fixed_date
+test_start: "2024-01-01"
+val_ratio: 0.15
+scale_y: true

@@ -1,0 +1,8 @@
+experiment_name: corn_monthly_timer_official_spike_platt
+seed: 42
+output_dir: experiments
+data_config: data_timer_official_spike_platt
+models:
+  - name: timer_official
+    enabled: true
+    config: model/timer_official.yaml

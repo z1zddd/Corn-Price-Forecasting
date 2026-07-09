@@ -1,2 +1,0 @@
-"""Corn price forecasting framework."""
-

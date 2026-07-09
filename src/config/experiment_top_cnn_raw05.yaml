@@ -1,0 +1,14 @@
+experiment_name: corn_monthly_top_cnn_raw05
+seed: 42
+output_dir: experiments
+data_config: data_top_raw05
+models:
+  - name: fcn
+    enabled: true
+    config: model/fcn_classifier.yaml
+  - name: resnet1d
+    enabled: true
+    config: model/resnet1d_classifier.yaml
+  - name: tcn
+    enabled: true
+    config: model/tcn_classifier.yaml

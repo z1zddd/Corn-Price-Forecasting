@@ -1,0 +1,17 @@
+dataset: corn_daily_enriched
+date_col: date
+price_col: dce_corn_close
+description: Enriched DCE corn daily trading data with futures, spot, CBOT, and weather features.
+columns:
+  date: trading date
+  dce_corn_close: DCE corn close price
+  dce_corn_volume: DCE corn volume
+  dce_corn_open_interest: DCE corn open interest
+  dce_corn_starch_close: DCE corn starch close price
+  domestic_corn_spot_price_cny_t: domestic corn spot price in CNY per tonne
+  corn_basis_cny_t: domestic spot minus futures basis
+  cbot_corn_close: CBOT corn close price
+  cbot_wheat_close: CBOT wheat close price
+  ne_avg_precip_mm: northeast China average precipitation
+  ne_avg_t2m_c: northeast China average temperature
+

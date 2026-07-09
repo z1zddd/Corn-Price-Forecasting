@@ -1,0 +1,13 @@
+name: chronos2_official
+class_path: src.models.official.chronos2.Chronos2OfficialForecaster
+task: classification
+params:
+  model_id: third_party/chronos2_official/amazon_chronos-2
+  pred_len: 1
+  close_feature_idx: -1
+  quantile_levels:
+    - 0.1
+    - 0.5
+    - 0.9
+  batch_size: 16
+  device_map: null

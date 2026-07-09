@@ -1,0 +1,8 @@
+name: knn
+class_path: src.models.classical.sklearn_models.KNNClassifierModel
+task: classification
+params:
+  n_neighbors: 7
+  weights: distance
+  metric: minkowski
+  p: 2

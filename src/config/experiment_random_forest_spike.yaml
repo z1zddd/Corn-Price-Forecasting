@@ -1,0 +1,8 @@
+experiment_name: corn_monthly_random_forest_spike
+seed: 42
+output_dir: experiments
+data_config: data_dual_stream_spike
+models:
+  - name: random_forest
+    enabled: true
+    config: model/random_forest_classifier.yaml

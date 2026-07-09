@@ -1,0 +1,12 @@
+name: gru
+class_path: src.models.deep.gru.GRUForecaster
+task: regression
+params:
+  hidden_size: 96
+  num_layers: 2
+  dropout: 0.1
+  epochs: 20
+  batch_size: 32
+  lr: 0.001
+  patience: 5
+

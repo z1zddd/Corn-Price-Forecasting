@@ -1,0 +1,9 @@
+name: linear_svc
+class_path: src.models.classical.sklearn_models.LinearSVCModel
+task: classification
+params:
+  C: 0.2
+  dual: auto
+  class_weight: balanced
+  max_iter: 10000
+  random_state: 42

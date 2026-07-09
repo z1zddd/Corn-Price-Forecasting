@@ -1,0 +1,8 @@
+experiment_name: corn_monthly_tirex_official_spike_platt
+seed: 42
+output_dir: experiments
+data_config: data_tirex_official_spike_platt
+models:
+  - name: tirex_official
+    enabled: true
+    config: model/tirex_official.yaml

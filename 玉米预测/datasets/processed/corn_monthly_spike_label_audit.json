@@ -1,0 +1,237 @@
+{
+  "source": "/Users/keyizhan/Downloads/玉米价格月度_混合特征无缺失值双头LSTM版.csv",
+  "target": "/Users/keyizhan/Documents/时序/玉米预测/datasets/processed/corn_monthly_dual_stream_spike_github.csv",
+  "backup": "/Users/keyizhan/Documents/时序/玉米预测/datasets/processed/corn_monthly_dual_stream_spike_github_annual_spike_backup.csv",
+  "rule": "spike = abs(dce_corn_close_next_month_ret) >= median(abs(dce_corn_close_next_month_ret)) over labeled monthly rows",
+  "abs_threshold": 0.025956938872378155,
+  "rows": 121,
+  "labeled_spike_rows": 120,
+  "old_spike_counts": {
+    "0": 61,
+    "1": 60
+  },
+  "new_spike_counts": {
+    "0.0": 60,
+    "1.0": 60,
+    "NaN": 1
+  },
+  "new_direction_counts": {
+    "0.0": 58,
+    "1.0": 62,
+    "NaN": 1
+  },
+  "old_spike_runs": [
+    {
+      "start_month": "16-Jun",
+      "end_month": "16-Dec",
+      "value": 0,
+      "length": 7
+    },
+    {
+      "start_month": "17-Jan",
+      "end_month": "18-Dec",
+      "value": 1,
+      "length": 24
+    },
+    {
+      "start_month": "19-Jan",
+      "end_month": "19-Dec",
+      "value": 0,
+      "length": 12
+    },
+    {
+      "start_month": "20-Jan",
+      "end_month": "22-Dec",
+      "value": 1,
+      "length": 36
+    },
+    {
+      "start_month": "23-Jan",
+      "end_month": "26-Jun",
+      "value": 0,
+      "length": 42
+    }
+  ],
+  "new_spike_runs_first_30": [
+    {
+      "start_month": "16-Jun",
+      "end_month": "16-Jun",
+      "value": 1,
+      "length": 1
+    },
+    {
+      "start_month": "16-Jul",
+      "end_month": "16-Jul",
+      "value": 0,
+      "length": 1
+    },
+    {
+      "start_month": "16-Aug",
+      "end_month": "16-Sep",
+      "value": 1,
+      "length": 2
+    },
+    {
+      "start_month": "16-Oct",
+      "end_month": "16-Nov",
+      "value": 0,
+      "length": 2
+    },
+    {
+      "start_month": "16-Dec",
+      "end_month": "17-Mar",
+      "value": 1,
+      "length": 4
+    },
+    {
+      "start_month": "17-Apr",
+      "end_month": "17-Apr",
+      "value": 0,
+      "length": 1
+    },
+    {
+      "start_month": "17-May",
+      "end_month": "17-May",
+      "value": 1,
+      "length": 1
+    },
+    {
+      "start_month": "17-Jun",
+      "end_month": "17-Sep",
+      "value": 0,
+      "length": 4
+    },
+    {
+      "start_month": "17-Oct",
+      "end_month": "17-Nov",
+      "value": 1,
+      "length": 2
+    },
+    {
+      "start_month": "17-Dec",
+      "end_month": "18-Jan",
+      "value": 0,
+      "length": 2
+    },
+    {
+      "start_month": "18-Feb",
+      "end_month": "18-Feb",
+      "value": 1,
+      "length": 1
+    },
+    {
+      "start_month": "18-Mar",
+      "end_month": "18-Mar",
+      "value": 0,
+      "length": 1
+    },
+    {
+      "start_month": "18-Apr",
+      "end_month": "18-Apr",
+      "value": 1,
+      "length": 1
+    },
+    {
+      "start_month": "18-May",
+      "end_month": "18-May",
+      "value": 0,
+      "length": 1
+    },
+    {
+      "start_month": "18-Jun",
+      "end_month": "18-Aug",
+      "value": 1,
+      "length": 3
+    },
+    {
+      "start_month": "18-Sep",
+      "end_month": "18-Sep",
+      "value": 0,
+      "length": 1
+    },
+    {
+      "start_month": "18-Oct",
+      "end_month": "18-Nov",
+      "value": 1,
+      "length": 2
+    },
+    {
+      "start_month": "18-Dec",
+      "end_month": "19-Feb",
+      "value": 0,
+      "length": 3
+    },
+    {
+      "start_month": "19-Mar",
+      "end_month": "19-Apr",
+      "value": 1,
+      "length": 2
+    },
+    {
+      "start_month": "19-May",
+      "end_month": "19-Jun",
+      "value": 0,
+      "length": 2
+    },
+    {
+      "start_month": "19-Jul",
+      "end_month": "19-Jul",
+      "value": 1,
+      "length": 1
+    },
+    {
+      "start_month": "19-Aug",
+      "end_month": "19-Aug",
+      "value": 0,
+      "length": 1
+    },
+    {
+      "start_month": "19-Sep",
+      "end_month": "19-Sep",
+      "value": 1,
+      "length": 1
+    },
+    {
+      "start_month": "19-Oct",
+      "end_month": "19-Oct",
+      "value": 0,
+      "length": 1
+    },
+    {
+      "start_month": "19-Nov",
+      "end_month": "19-Nov",
+      "value": 1,
+      "length": 1
+    },
+    {
+      "start_month": "19-Dec",
+      "end_month": "20-Jan",
+      "value": 0,
+      "length": 2
+    },
+    {
+      "start_month": "20-Feb",
+      "end_month": "20-Feb",
+      "value": 1,
+      "length": 1
+    },
+    {
+      "start_month": "20-Mar",
+      "end_month": "20-May",
+      "value": 0,
+      "length": 3
+    },
+    {
+      "start_month": "20-Jun",
+      "end_month": "20-Sep",
+      "value": 1,
+      "length": 4
+    },
+    {
+      "start_month": "20-Oct",
+      "end_month": "20-Oct",
+      "value": 0,
+      "length": 1
+    }
+  ]
+}

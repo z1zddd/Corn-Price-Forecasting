@@ -1,0 +1,74 @@
+dataset: corn_monthly_no_news_pca
+description: Monthly corn mixed-feature dataset following the GitHub dual-head LSTM table, with news PCA features removed.
+source:
+  local_template: 玉米预测/datasets/processed/corn_monthly_dual_stream_spike_github.csv
+  github_template: https://github.com/z1zddd/-/blob/main/data/%E7%8E%89%E7%B1%B3%E4%BB%B7%E6%A0%BC%E5%8E%9F%E5%A7%8B%E6%95%B0%E6%8D%AE/%E7%8E%89%E7%B1%B3%E4%BB%B7%E6%A0%BC%E6%9C%88%E5%BA%A6_%E6%B7%B7%E5%90%88%E7%89%B9%E5%BE%81%E6%97%A0%E7%BC%BA%E5%A4%B1%E5%80%BC%E5%8F%8C%E5%A4%B4LSTM%E7%89%88.csv
+build_script: 玉米预测/scripts/prepare_corn_no_news_pca_dataset.py
+output_csv: 玉米预测/datasets/processed/corn_monthly_no_news_pca.csv
+frequency: monthly
+date_col: month
+date_format: "%Y-%m"
+rows: 121
+columns: 96
+model_feature_columns: 90
+month_min: 2016-06
+month_max: 2026-06
+missing_values: 0
+dropped_columns:
+  pattern: pca_*
+  count: 32
+targets:
+  price_next_month: dce_corn_close_next_month
+  return_next_month: dce_corn_close_next_month_ret
+  spike_classification: spike
+feature_groups:
+  trading_calendar:
+    - month
+    - first_trade_date
+    - last_trade_date
+    - n_obs
+  dce_corn:
+    prefix: dce_corn_
+    examples:
+      - dce_corn_open_first
+      - dce_corn_close_last
+      - dce_corn_volume_sum
+      - dce_corn_open_interest_last
+  dce_corn_starch:
+    prefix: dce_corn_starch_
+    examples:
+      - dce_corn_starch_close_last
+      - dce_corn_starch_volume_sum
+  domestic_spot_basis:
+    examples:
+      - domestic_corn_spot_price_cny_t_mean
+      - corn_basis_cny_t_mean
+      - corn_basis_rate_last
+      - corn_100ppi_main_futures_price_cny_t_last
+  cbot:
+    prefixes:
+      - cbot_corn_
+      - cbot_wheat_
+    examples:
+      - cbot_corn_close_last
+      - cbot_wheat_close_last
+      - cbot_wheat_corn_ratio_last
+  weather:
+    examples:
+      - hlj_precip_mm_sum
+      - jilin_precip_mm_mean
+      - inner_mongolia_t2m_c_last
+      - ne_avg_t2m_c_mean
+  seasonality:
+    examples:
+      - is_harvest_season_ne_cn_flag
+      - is_harvest_season_ne_cn_share
+  technical_features:
+    examples:
+      - dce_corn_close_ma3
+      - dce_corn_close_ret_6m
+      - dce_corn_close_vol_12m
+notes:
+  - News PCA columns were intentionally removed because the current dataset should not use news principal components.
+  - The spike label is retained because it is part of the dual-head LSTM template target setup, not a news PCA feature.
+  - Month and trade-date fields were normalized to ISO-style strings for clearer downstream parsing.

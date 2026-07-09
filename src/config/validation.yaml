@@ -1,0 +1,14 @@
+strategy: rolling_origin
+h: 30
+n_windows: 6
+step_size: 30
+min_train_size: 756
+max_train_size: null
+primary_metric: direction_accuracy
+secondary_metrics:
+  - profit_factor
+  - sharpe_ratio
+  - win_rate
+  - max_drawdown
+  - rmse
+  - mae

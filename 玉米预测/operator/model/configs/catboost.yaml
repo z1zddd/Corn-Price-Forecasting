@@ -1,0 +1,10 @@
+name: catboost
+class_path: src.models.classical.catboost_model.CatBoostModel
+task: regression
+params:
+  iterations: 300
+  depth: 4
+  learning_rate: 0.03
+  random_seed: 42
+  verbose: false
+

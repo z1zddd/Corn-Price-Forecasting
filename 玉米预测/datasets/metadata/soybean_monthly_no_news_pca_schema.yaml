@@ -1,0 +1,119 @@
+dataset: soybean_monthly_no_news_pca
+description: Monthly soybean mixed-feature dataset modeled after the corn mixed-feature table, with no news PCA features.
+build_script: 玉米预测/scripts/collect_soybean_dataset.py
+raw_csv: 玉米预测/datasets/raw/soybean_daily_enriched.csv
+output_csv: 玉米预测/datasets/processed/soybean_monthly_no_news_pca.csv
+latest_unlabeled_csv: 玉米预测/datasets/processed/soybean_monthly_latest_unlabeled.csv
+frequency: monthly
+date_col: month
+date_format: "%Y-%m"
+rows: 120
+columns: 190
+month_min: 2016-06
+month_max: 2026-05
+latest_unlabeled_month: 2026-06
+missing_values: 0
+news_pca_columns: 0
+source_limitations:
+  - DCE/Sina main-continuous futures source currently ends on 2024-07-17 for A0/B0/M0/Y0/P0 in this environment.
+  - From 2024-07-18 onward, DCE futures are extended by collecting individual Sina contract daily bars and selecting the highest-volume contract per date as a synthetic main-continuous series.
+  - DCE official dayQuotes endpoint returned HTTP 412 protection pages, and Eastmoney historical futures endpoint disconnected in this environment.
+  - UN Comtrade public preview returned China soybean import values through 2024-12; 2025-2026 import columns are forward-filled in the model table.
+sources:
+  dce_main_continuous:
+    provider: Sina futures JSON API plus contract-based synthetic continuation
+    symbols:
+      dce_soybean: A0
+      dce_soybean2: B0
+      dce_soybean_meal: M0
+      dce_soybean_oil: Y0
+      dce_palm_oil: P0
+    fields:
+      - open
+      - high
+      - low
+      - close
+      - volume
+  cbot_futures:
+    provider: Yahoo Finance chart API
+    symbols:
+      cbot_soybean: ZS=F
+      cbot_soybean_meal: ZM=F
+      cbot_soybean_oil: ZL=F
+      cbot_corn: ZC=F
+      cbot_wheat: ZW=F
+  global_prices:
+    provider: World Bank Pink Sheet monthly commodity prices
+    series:
+      - Soybeans
+      - Soybean meal
+      - Soybean oil
+      - Palm oil
+      - Maize
+      - Wheat, US SRW
+  imports:
+    provider: UN Comtrade public preview API
+    reporter: China
+    flow: imports
+    classification: HS
+    commodity_code: "1201"
+    note: Missing months are filled in the model table via forward/backward fill. Public preview had no import values for 2025-2026 at collection time.
+  weather:
+    provider: Open-Meteo Archive API
+    regions:
+      - Heilongjiang/Harbin proxy
+      - Jilin/Changchun proxy
+      - eastern Inner Mongolia/Tongliao proxy
+      - Iowa proxy
+      - Illinois proxy
+      - Mato Grosso proxy
+targets:
+  price_next_month: dce_soybean_close_next_month
+  return_next_month: dce_soybean_close_next_month_ret
+  direction_next_month: dce_soybean_close_next_month_direction
+  spike_classification: spike
+target_notes:
+  - spike is a balanced large-move label: abs(next-month return) >= median abs(next-month return) within the labeled dataset.
+feature_groups:
+  dce_soybean:
+    prefix: dce_soybean_
+  dce_related:
+    prefixes:
+      - dce_soybean2_
+      - dce_soybean_meal_
+      - dce_soybean_oil_
+      - dce_palm_oil_
+  cbot:
+    prefixes:
+      - cbot_soybean_
+      - cbot_soybean_meal_
+      - cbot_soybean_oil_
+      - cbot_corn_
+      - cbot_wheat_
+  global_price_basis:
+    prefixes:
+      - global_soybean_
+      - global_soybean_meal_
+      - global_soybean_oil_
+      - global_palm_oil_
+      - global_corn_
+      - global_wheat_
+  imports:
+    prefix: soybean_import_
+  weather:
+    examples:
+      - ne_avg_precip_mm_sum
+      - ne_avg_t2m_c_mean
+      - us_midwest_avg_precip_mm_sum
+      - mato_grosso_t2m_c_mean
+  seasonality:
+    examples:
+      - is_soybean_harvest_season_ne_cn_flag
+      - is_soybean_planting_season_ne_cn_flag
+      - is_us_soybean_harvest_season_flag
+      - is_brazil_soybean_harvest_season_flag
+  technical_features:
+    examples:
+      - dce_soybean_close_ma3
+      - dce_soybean_close_ret_6m
+      - dce_soybean_close_vol_12m

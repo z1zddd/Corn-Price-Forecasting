@@ -1,22 +1,32 @@
+.DS_Store
 __pycache__/
 *.py[cod]
-.pytest_cache/
-.mplconfig/
-.mypy_cache/
-.ruff_cache/
 *.egg-info/
-build/
+.pytest_cache/
 .venv/
-.venv*/
-local_data/
+venv/
+
+# Local credentials and Codex session notes
+CODEX_PROMPT.md
+CHECKLIST.md
+
+# Local training outputs
+catboost_info/
 experiments/
 outputs/
-*_outputs/
+
+# Downloaded or extracted dependencies/reference repos
+third_party/
+github_framework/
+github_upload/
+
+# Model artifacts and heavy binaries
 *.pt
 *.pth
+*.ckpt
 *.pkl
 *.joblib
-*.zip
-*.docx
+*.onnx
 *.tar.gz
-.DS_Store
+*.zip
+

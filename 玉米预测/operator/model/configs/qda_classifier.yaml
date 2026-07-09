@@ -1,0 +1,5 @@
+name: qda
+class_path: src.models.classical.sklearn_models.QDAModel
+task: classification
+params:
+  reg_param: 0.1

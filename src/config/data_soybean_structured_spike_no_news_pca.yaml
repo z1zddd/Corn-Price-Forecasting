@@ -1,0 +1,29 @@
+task: past 12 months -> predict next month soybean spike classification without news PCA
+source: 玉米预测/scripts/collect_soybean_dataset.py
+csv_path: 玉米预测/datasets/processed/soybean_monthly_no_news_pca.csv
+series_id: soybean_monthly_structured_spike_no_news_pca
+frequency: monthly
+date_col: month
+price_col: dce_soybean_close
+target_col: spike
+target_mode: classification
+target_alignment: target_idx
+
+feature_cols: auto_numeric
+exclude_feature_cols:
+  - first_trade_date
+  - last_trade_date
+  - dce_soybean_close_next_month
+  - dce_soybean_close_next_month_ret
+  - dce_soybean_close_next_month_direction
+  - spike
+max_missing_ratio: 0.0
+
+seq_len: 12
+horizon: 1
+include_today: true
+split_method: ratio
+train_ratio: 0.65
+val_ratio: 0.20
+scale_y: false
+classification_threshold_strategy: validation_f1_weighted

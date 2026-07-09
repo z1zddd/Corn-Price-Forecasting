@@ -1,0 +1,34 @@
+task: past 24 months -> predict next month spike classification
+source: github:z1zddd/-/script/LSTM双头版 24-lookback ablation
+csv_path: 玉米预测/datasets/processed/corn_monthly_dual_stream_spike_github.csv
+series_id: corn_monthly_dual_stream_spike_l24
+frequency: monthly
+date_col: month
+date_format: "%y-%b"
+price_col: dce_corn_close
+target_col: spike
+target_mode: classification
+target_alignment: target_idx
+
+# Same fallback feature rule as data_dual_stream_spike, but with a 24-month lookback.
+feature_cols: dual_stream_default
+top_n: 79
+structured_top_n: 57
+news_top_n: 22
+news_feature_prefix: pca_
+exclude_feature_cols:
+  - first_trade_date
+  - last_trade_date
+  - dce_corn_close_next_month
+  - dce_corn_close_next_month_ret
+  - spike
+max_missing_ratio: 0.30
+
+seq_len: 24
+horizon: 1
+include_today: true
+split_method: ratio
+train_ratio: 0.65
+val_ratio: 0.20
+scale_y: false
+classification_threshold_strategy: validation_f1_weighted

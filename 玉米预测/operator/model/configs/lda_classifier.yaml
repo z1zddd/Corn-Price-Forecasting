@@ -1,0 +1,6 @@
+name: lda
+class_path: src.models.classical.sklearn_models.LDAModel
+task: classification
+params:
+  solver: lsqr
+  shrinkage: auto

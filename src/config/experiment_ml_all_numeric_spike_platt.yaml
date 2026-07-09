@@ -1,0 +1,56 @@
+experiment_name: corn_monthly_ml_all_numeric_spike_platt
+seed: 42
+output_dir: experiments
+data_config: data_ml_all_numeric_spike_platt
+models:
+  - name: logistic_regression
+    enabled: true
+    config: model/logistic_regression_classifier.yaml
+  - name: ridge_classifier
+    enabled: true
+    config: model/ridge_classifier.yaml
+  - name: linear_svc
+    enabled: true
+    config: model/linear_svc_classifier.yaml
+  - name: rbf_svc
+    enabled: true
+    config: model/rbf_svc_classifier.yaml
+  - name: knn
+    enabled: true
+    config: model/knn_classifier.yaml
+  - name: random_forest
+    enabled: true
+    config: model/random_forest_classifier.yaml
+  - name: extra_trees
+    enabled: true
+    config: model/extra_trees_classifier.yaml
+  - name: gradient_boosting
+    enabled: true
+    config: model/gradient_boosting_classifier.yaml
+  - name: hist_gradient_boosting
+    enabled: true
+    config: model/hist_gradient_boosting_classifier.yaml
+  - name: adaboost
+    enabled: true
+    config: model/adaboost_classifier.yaml
+  - name: gaussian_nb
+    enabled: true
+    config: model/gaussian_nb_classifier.yaml
+  - name: lda
+    enabled: true
+    config: model/lda_classifier.yaml
+  - name: qda
+    enabled: true
+    config: model/qda_classifier.yaml
+  - name: mlp
+    enabled: true
+    config: model/mlp_classifier.yaml
+  - name: xgboost
+    enabled: true
+    config: model/xgboost_classifier.yaml
+  - name: lightgbm
+    enabled: true
+    config: model/lightgbm_classifier.yaml
+  - name: catboost
+    enabled: true
+    config: model/catboost_classifier.yaml

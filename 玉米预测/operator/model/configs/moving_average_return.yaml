@@ -1,0 +1,7 @@
+name: moving_average_return
+class_path: src.models.classical.baseline.MovingAverageReturnBaseline
+task: regression
+params:
+  close_feature_idx: 0
+  window: 5
+

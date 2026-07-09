@@ -1,0 +1,16 @@
+name: itransformer
+class_path: src.models.deep.itransformer.ITransformerClassifier
+task: classification
+params:
+  hidden_size: 96
+  num_layers: 2
+  n_heads: 4
+  dropout: 0.1
+  epochs: 80
+  batch_size: 16
+  lr: 0.0005
+  weight_decay: 0.0001
+  patience: 12
+  min_delta: 0.00001
+  grad_clip: 1.0
+  device: cpu
