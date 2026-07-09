@@ -1,6 +1,8 @@
 # Architecture
 
-Commodity Backtest is organized as a small Python package with clear boundaries between configuration, data preparation, temporal splitting, model construction, evaluation, and reporting.
+Commodity Backtest is organized as a small Python package with clear
+boundaries between dataset materials, operators, configuration, temporal
+splitting, model construction, evaluation, and reporting.
 
 ```text
 YAML config
@@ -14,6 +16,26 @@ YAML config
   -> report writer and agent verdict
 ```
 
+## Core Layers
+
+The project uses this boundary:
+
+```text
+time-series model = operator + datasets
+```
+
+- `datasets` are the materials being operated on: corn prices, factor tables,
+  news PCA columns, rolling prediction streams, prediction libraries, schemas,
+  and source notes.
+- `operator` contains methods that act on those materials: model families,
+  wrappers, losses, aggregation operators, and future feature operators.
+- `pipeline` orchestrates workflow: training, backtesting, evaluation,
+  reporting, and scheduling. Pipeline code does not define model families.
+
+The root-level `datasets/` directory remains the repository-compatible sample
+data area used by existing configs. `corn_forecast/datasets/` is the
+framework-internal material definition layer.
+
 ## Package Layout
 
 ```text
@@ -22,11 +44,17 @@ YAML config
     config/
       loader.py     load YAML files
       schema.py     validate required fields and temporal constraints
+    datasets/
+      registry.py   lightweight material registry
+      schema.py     lightweight schema declarations
+      corn/         corn-specific material docs and schema contracts
     data/
       loader.py     load CSVs with encoding fallback and select features
       targets.py    derive future price, return, and direction targets
       windowing.py  turn tabular rows into lookback windows
       diagnosis.py  summarize dataset health
+    operator/
+      model/        canonical model operators, families, registry, wrappers, losses, aggregation
     pipeline/
       backtest/
         splits.py   expanding, rolling, capped expanding windows
@@ -34,17 +62,29 @@ YAML config
       train/        compact torch training and loss helpers
       eval/         forecasting, trading, calibration, and CI metrics
       report/       CSV, JSON, Markdown, chart outputs, and verdicts
-    modeling/
-      base.py       common model protocol
-      baselines/    simple benchmark models
-      classical/    sklearn-style and package-native tabular models
-      sequence/     optional torch sequence classifiers
-      specs/        model-pool specifications, including official 57
-      registry/     YAML model factory
-      losses/       benchmark layer-2 model adapters
-      wrappers/     shared third-party runtime adapters
-      ensembles/    deployment ensemble logic
+    modeling/       legacy compatibility shims for corn_forecast.operator.model
 ```
+
+## Datasets Material Layer
+
+`corn_forecast/datasets/` contains metadata, schemas, and registry entries for
+materials. It is intentionally lightweight and does not import pandas, sklearn,
+torch, or other modeling/runtime dependencies.
+
+Corn materials are organized as:
+
+```text
+corn_forecast/datasets/corn/
+  raw/                 source-like materials and source notes
+  processed/           cleaned monthly modeling table contracts
+  factors/             factor group notes such as futures, spot, weather, news PCA
+  prediction_library/  completed rolling prediction streams
+  metadata/            schema and lineage documents
+```
+
+Generated experiment outputs, model weights, compressed archives, and private
+enterprise data should stay out of both `corn_forecast/datasets/` and the
+root-level `datasets/` directory.
 
 ## Backtest Flow
 
@@ -72,7 +112,9 @@ YAML config
 - optional torch sequence classifiers: `lstm`, `gru`, `transformer`, `patchtst`, `itransformer`, `dlinear`, and `dual_stream_lstm`
 - optional `lightgbm`, `xgboost`, and `catboost`
 
-New models should be added behind `corn_forecast/modeling/registry/` so the CLI remains YAML-driven.
+New models should be added behind `corn_forecast/operator/model/registry/` so
+the CLI remains YAML-driven. `corn_forecast/modeling/registry/` remains as a
+legacy compatibility path.
 
 Model configs can use either the original typed form:
 
