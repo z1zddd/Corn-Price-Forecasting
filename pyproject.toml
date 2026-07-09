@@ -47,10 +47,6 @@ official-pool = [
   "tensorflow>=2.15",
   "keras-tcn>=3.5",
 ]
-dev = [
-  "pytest>=8.0",
-]
-
 [project.scripts]
 commodity-backtest = "corn_forecast.cli:main"
 
@@ -58,7 +54,3 @@ commodity-backtest = "corn_forecast.cli:main"
 where = ["."]
 include = ["corn_forecast*"]
 exclude = ["tests*", "docs*", "examples*", "configs*", "scripts*", "experiments*"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]

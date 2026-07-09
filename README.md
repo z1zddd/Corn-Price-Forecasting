@@ -13,14 +13,14 @@
 - 标准化器只在每个 rolling 窗口的训练集上 `fit`，并可从训练集尾部切出验证集。
 - 内置基线模型、scikit-learn 模型、基准损失变体，并支持可选 PyTorch 序列模型。
 - 输出 `comparison.csv`、`report.md`、`agent_verdict.json`、各模型预测结果、指标、权益曲线图、`rolling_dir_acc.png` 和 `rolling_sharpe.png`。
-- 包含配置校验、数据处理、切分模式、模型、指标、报告、CLI 命令和仓库边界测试。
+- 包含配置校验、数据处理、切分模式、模型、指标、报告、CLI 命令和仓库边界约束。
 
 ## 安装
 
 ```bash
 python -m venv .venv
 .venv\Scripts\python -m pip install -U pip
-.venv\Scripts\python -m pip install -e .[dev]
+.venv\Scripts\python -m pip install -e .
 ```
 
 如果使用 macOS 或 Linux，请把 `.venv\Scripts\python` 换成 `.venv/bin/python`。
@@ -54,7 +54,6 @@ examples/               示例数据
 datasets/               小型仓库内数据资产
 scripts/                实验、搜索、验证和维护脚本
 docs/                   架构、配置和实验说明
-tests/                  自动化测试
 local_data/             本地原始数据目录，默认不提交到 git
 ```
 
@@ -148,10 +147,12 @@ pip install -e .[deep]
 - [无泄漏组合搜索](docs/ensemble-search.md)
 - [Agent 工作流](docs/agent-workflow.md)
 
-## 测试
+## 验证
+
+需要做本地验证时，优先使用：
 
 ```bash
-python -m pytest -v
+commodity-backtest --help
+python -m corn_forecast.cli --help
+commodity-backtest diagnose --config configs/corn.yaml
 ```
-
-GitHub Actions 已在 `.github/workflows/tests.yml` 中配置，会在 push 和 pull request 时运行同一套测试。
