@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import copy
 import json
 import sys
 from pathlib import Path
@@ -15,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from corn_forecast.pipeline.backtest.engine import run_backtest
 from corn_forecast.pipeline.backtest.splits import make_backtest_windows
 from corn_forecast.config.loader import load_config
 from corn_forecast.data.loader import load_commodity_csv, select_feature_columns
@@ -37,9 +35,6 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--configs", nargs="*", default=DEFAULT_CONFIGS)
     parser.add_argument("--output-dir", default="experiments/official_pool_validation")
-    parser.add_argument("--smoke-models", default="random_forest_shallow")
-    parser.add_argument("--skip-smoke", action="store_true")
-    parser.add_argument("--ci-bootstrap-samples", type=int, default=20)
     return parser.parse_args()
 
 
@@ -49,14 +44,11 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     audit_rows = []
-    smoke_rows = []
     for config_path in args.configs:
         cfg = load_config(config_path, validate=True)
         audit_rows.append(audit_config(config_path, cfg))
-        if not args.skip_smoke:
-            smoke_rows.append(run_smoke(config_path, cfg, output_dir, args.smoke_models, args.ci_bootstrap_samples))
 
-    payload = {"configs": audit_rows, "smoke_runs": smoke_rows}
+    payload = {"configs": audit_rows}
     (output_dir / "official_pool_validation_summary.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -145,31 +137,6 @@ def audit_config(config_path: str, cfg: dict) -> dict:
         "pca_feature_count": int(pca_count),
         "lookbacks": lookback_rows,
         "target_known_only": bool(train_cfg.get("target_known_only", False)),
-    }
-
-
-def run_smoke(config_path: str, cfg: dict, output_dir: Path, smoke_models: str, ci_bootstrap_samples: int) -> dict:
-    run_cfg = copy.deepcopy(cfg)
-    enabled = [item.strip() for item in smoke_models.split(",") if item.strip()]
-    run_cfg["models"] = {"pool": "official_57", "enable_only": enabled}
-    run_cfg.setdefault("evaluation", {})
-    run_cfg["evaluation"]["ci_bootstrap_samples"] = int(ci_bootstrap_samples)
-    run_name = Path(config_path).stem
-    run_dir = output_dir / run_name
-    comparison = run_backtest(run_cfg, output_dir=run_dir)
-    comparison.to_csv(run_dir / "official_pool_smoke_comparison.csv", index=False)
-    best = comparison.iloc[0].to_dict()
-    return {
-        "config": config_path,
-        "output_dir": str(run_dir),
-        "models": enabled,
-        "rows": int(len(comparison)),
-        "best_model": str(best["model"]),
-        "best_DirAcc": float(best["DirAcc"]),
-        "best_BalancedAcc": float(best["BalancedAcc"]),
-        "best_AUC": float(best["AUC"]),
-        "best_AP": float(best["AP"]),
-        "best_R2_health": None if pd.isna(best.get("R2_health")) else best.get("R2_health"),
     }
 
 
