@@ -1,6 +1,6 @@
 # Configuration
 
-Each experiment is controlled by a YAML file. Use `configs/corn.yaml` as the working example and `configs/template.yaml` as the starting point for new commodities.
+Each experiment is controlled by a YAML file. Use `configs/corn.yaml` as the corn reference config and `configs/template.yaml` as the starting point for new commodities.
 
 ## Top-Level Sections
 
@@ -38,7 +38,7 @@ models:
 
 ```yaml
 data:
-  csv_path: examples/corn/sample_data.csv
+  csv_path: datasets/corn_sample_data.csv
   date_col: date
   date_format: "%Y-%m-%d"
   price_col: close

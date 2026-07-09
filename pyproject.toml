@@ -53,4 +53,4 @@ commodity-backtest = "corn_forecast.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["corn_forecast*"]
-exclude = ["tests*", "docs*", "examples*", "configs*", "scripts*", "experiments*"]
+exclude = ["docs*", "configs*", "scripts*", "experiments*"]
