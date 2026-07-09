@@ -1,8 +1,0 @@
-experiment_name: corn_monthly_dual_stream_lstm_spike_l24
-seed: 42
-output_dir: experiments
-data_config: data_dual_stream_spike_l24
-models:
-  - name: dual_stream_lstm
-    enabled: true
-    config: model/dual_stream_lstm.yaml

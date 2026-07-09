@@ -1,0 +1,18 @@
+{
+  "top6_h1": [
+    "mlp_small_relu|news|lb6|h1|cls",
+    "sgd_modified_huber|news|lb6|h1|cls",
+    "lightgbm_dart|news|lb12|h1|reg",
+    "keras_lstm_u16|nonews|lb12|h1|cls",
+    "keras_tcn_filters16_k2_d1|nonews|lb9|h1|reg",
+    "keras_gru_u16|news|lb12|h1|reg"
+  ],
+  "top6_h2": [
+    "aeon_knn_euclidean|news|lb6|h2|reg",
+    "knn_5_distance|news|lb6|h2|reg",
+    "aeon_deep_timecnn|news|lb12|h2|cls",
+    "aeon_deep_timecnn|nonews|lb12|h2|cls",
+    "knn_3_uniform|news|lb12|h2|cls",
+    "aeon_rise|nonews|lb6|h2|cls"
+  ]
+}

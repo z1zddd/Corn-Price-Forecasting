@@ -1,8 +1,0 @@
-experiment_name: corn_monthly_itransformer_all_numeric_spike
-seed: 42
-output_dir: experiments
-data_config: data_all_numeric_spike
-models:
-  - name: itransformer
-    enabled: true
-    config: model/itransformer_classifier.yaml

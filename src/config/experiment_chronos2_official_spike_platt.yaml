@@ -1,8 +1,0 @@
-experiment_name: corn_monthly_chronos2_official_spike_platt
-seed: 42
-output_dir: experiments
-data_config: data_chronos2_official_spike_platt
-models:
-  - name: chronos2_official
-    enabled: true
-    config: model/chronos2_official.yaml

@@ -1,9 +1,0 @@
-name: rbf_svc
-class_path: src.models.classical.sklearn_models.SVCModel
-task: classification
-params:
-  C: 1.0
-  gamma: scale
-  class_weight: balanced
-  probability: false
-  random_state: 42

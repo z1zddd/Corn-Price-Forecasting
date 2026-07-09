@@ -1,0 +1,57 @@
+commodity:
+  name: template
+  exchange: generic
+  frequency: monthly
+
+data:
+  csv_path: datasets/corn_sample_data.csv
+  date_col: date
+  price_col: close
+  feature_cols: auto_numeric
+  encoding:
+    - utf-8
+    - gbk
+    - gb18030
+  exclude_feature_cols: []
+
+target:
+  horizon: 1
+  mode: classification
+  spike_threshold: 0.0
+
+lookback:
+  candidates: [3, 6, 9]
+  default: 3
+
+train_window:
+  mode: expanding
+  min_train_periods: 12
+  stride_periods: 1
+  window_size_periods: null
+  max_train_periods: null
+
+split:
+  val_ratio: 0.10
+
+evaluation:
+  primary_metric: direction_accuracy
+  ci_level: 0.95
+  ci_bootstrap_samples: 200
+
+honest_bounds:
+  dir_acc_floor: 0.50
+  dir_acc_ceiling: 0.60
+  sharpe_floor: -0.20
+  sharpe_ceiling: 1.00
+
+models:
+  - name: last_return
+    type: baseline
+    enabled: true
+  - name: random_forest
+    type: sklearn_random_forest
+    enabled: true
+    params:
+      n_estimators: 20
+      max_depth: 4
+      random_state: 42

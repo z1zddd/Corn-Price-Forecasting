@@ -1,8 +1,0 @@
-experiment_name: corn_monthly_lstm_seq12_h1_github_repro
-seed: 42
-output_dir: experiments
-data_config: data_monthly_github
-models:
-  - name: lstm
-    enabled: true
-    config: model/lstm_monthly.yaml

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forecast Framework Preflight"
+  short_description: "Audit labels and leakage before runs."
+  default_prompt: "Use $forecast-framework-preflight to confirm the experiment contract, audit labels and leakage, check framework fit, and decide whether the forecasting run is allowed."

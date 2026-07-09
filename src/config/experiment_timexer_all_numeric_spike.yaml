@@ -1,8 +1,0 @@
-experiment_name: corn_monthly_timexer_all_numeric_spike
-seed: 42
-output_dir: experiments
-data_config: data_timexer_all_numeric_spike
-models:
-  - name: timexer
-    enabled: true
-    config: model/timexer_classifier.yaml

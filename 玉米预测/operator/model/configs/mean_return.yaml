@@ -1,5 +1,0 @@
-name: mean_return
-class_path: src.models.classical.baseline.MeanReturnBaseline
-task: regression
-params: {}
-

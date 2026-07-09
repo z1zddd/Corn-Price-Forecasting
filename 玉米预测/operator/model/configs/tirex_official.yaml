@@ -1,9 +1,0 @@
-name: tirex_official
-class_path: src.models.official.tirex.TiRexOfficialForecaster
-task: classification
-params:
-  model_id: third_party/tirex_official/NX-AI_TiRex
-  pred_len: 1
-  close_feature_idx: 0
-  batch_size: 64
-  device: null

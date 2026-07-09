@@ -1,8 +1,0 @@
-experiment_name: corn_monthly_timepfn_official_spike_platt
-seed: 42
-output_dir: experiments
-data_config: data_timepfn_official_spike_platt
-models:
-  - name: timepfn_official
-    enabled: true
-    config: model/timepfn_official.yaml

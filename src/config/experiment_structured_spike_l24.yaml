@@ -1,8 +1,0 @@
-experiment_name: corn_monthly_structured_lstm_spike_l24
-seed: 42
-output_dir: experiments
-data_config: data_structured_spike_l24
-models:
-  - name: structured_lstm
-    enabled: true
-    config: model/structured_lstm.yaml

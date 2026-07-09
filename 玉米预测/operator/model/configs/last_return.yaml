@@ -1,6 +1,0 @@
-name: last_return
-class_path: src.models.classical.baseline.LastReturnBaseline
-task: regression
-params:
-  close_feature_idx: 0
-

@@ -1,5 +1,0 @@
-name: zero_return
-class_path: src.models.classical.baseline.ZeroReturnBaseline
-task: regression
-params: {}
-
