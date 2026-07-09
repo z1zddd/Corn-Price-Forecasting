@@ -28,7 +28,7 @@ python -m venv .venv
 ## 快速开始
 
 ```bash
-commodity-backtest diagnose --csv examples/corn/sample_data.csv --date-col date
+commodity-backtest diagnose --csv datasets/corn_sample_data.csv --date-col date
 commodity-backtest diagnose --config configs/corn.yaml
 commodity-backtest auto-window --config configs/corn.yaml
 commodity-backtest build-config --base-config configs/template.yaml --output configs/my_commodity.yaml --commodity-name my_commodity --csv local_data/my.csv --date-col date --price-col close
@@ -49,8 +49,7 @@ corn_forecast/          框架主包
   data/                 CSV 读取、目标生成、特征选择和窗口构造
   pipeline/             回测、训练、评估和报告流程
   modeling/             模型、模型池、损失变体、registry、wrapper 和 ensemble
-configs/                示例和官方实验配置
-examples/               示例数据
+configs/                模板和官方实验配置
 datasets/               小型仓库内数据资产
 scripts/                实验、搜索、验证和维护脚本
 docs/                   架构、配置和实验说明

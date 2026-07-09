@@ -41,7 +41,7 @@ The verdict includes:
 ## CLI Commands
 
 ```bash
-commodity-backtest diagnose --csv examples/corn/sample_data.csv --date-col date
+commodity-backtest diagnose --csv datasets/corn_sample_data.csv --date-col date
 commodity-backtest build-config --base-config configs/template.yaml --output configs/my_commodity.yaml --commodity-name my_commodity --csv local_data/my.csv --date-col date --price-col close
 commodity-backtest auto-window --config configs/corn.yaml
 commodity-backtest run --config configs/corn.yaml
@@ -52,7 +52,7 @@ commodity-backtest interpret --experiment experiments/manual_run
 
 ## GitHub Hygiene
 
-Generated experiments are intentionally ignored by git. Keep only source code, tests, configs, docs, and small example data in the repository.
+Generated experiments are intentionally ignored by git. Keep only source code, configs, docs, and small reference data in the repository.
 
 Do not commit:
 
