@@ -1,12 +1,6 @@
-"""Aeon deep MLP official-pool spec."""
+"""Legacy compatibility shim for `corn_forecast.modeling.specs.official.aeon.deep_mlp`.
 
-from __future__ import annotations
+Canonical implementation: `corn_forecast.operator.model.families.official.aeon.deep_mlp`.
+"""
 
-from ..base import OfficialPoolSpec
-from .common import AEON_DEEP_BATCH_SIZE, AEON_DEEP_EPOCHS, deep_pair
-
-
-def build_deep_mlp_specs() -> list[OfficialPoolSpec]:
-    return [
-        deep_pair("aeon_deep_mlp", "MLPClassifier", "MLPRegressor", AEON_DEEP_EPOCHS, AEON_DEEP_BATCH_SIZE, {"n_layers": 2, "n_units": 64}, {"n_layers": 2, "n_units": 64}),
-    ]
+from corn_forecast.operator.model.families.official.aeon.deep_mlp import *  # noqa: F401,F403

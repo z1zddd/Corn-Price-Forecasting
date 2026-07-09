@@ -1,12 +1,6 @@
-"""Euclidean KNN official-pool spec."""
+"""Legacy compatibility shim for `corn_forecast.modeling.specs.official.aeon.knn_euclidean`.
 
-from __future__ import annotations
+Canonical implementation: `corn_forecast.operator.model.families.official.aeon.knn_euclidean`.
+"""
 
-from ..base import OfficialPoolSpec
-from .common import spec_pair
-
-
-def build_knn_euclidean_specs() -> list[OfficialPoolSpec]:
-    return [
-        spec_pair("aeon_knn_euclidean", "tsc_distance", "KNeighborsTimeSeriesClassifier", "KNeighborsTimeSeriesRegressor", "aeon.classification.distance_based", "aeon.regression.distance_based", {"n_neighbors": 5, "distance": "euclidean", "n_jobs": 1}, {"n_neighbors": 5, "distance": "euclidean", "n_jobs": 1}, "euclidean_vote", "euclidean_mean"),
-    ]
+from corn_forecast.operator.model.families.official.aeon.knn_euclidean import *  # noqa: F401,F403

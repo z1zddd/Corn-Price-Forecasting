@@ -1,12 +1,6 @@
-"""Aeon FCN official-pool spec."""
+"""Legacy compatibility shim for `corn_forecast.modeling.specs.official.aeon.deep_fcn`.
 
-from __future__ import annotations
+Canonical implementation: `corn_forecast.operator.model.families.official.aeon.deep_fcn`.
+"""
 
-from ..base import OfficialPoolSpec
-from .common import AEON_DEEP_BATCH_SIZE, AEON_DEEP_EPOCHS, deep_pair
-
-
-def build_deep_fcn_specs() -> list[OfficialPoolSpec]:
-    return [
-        deep_pair("aeon_deep_fcn", "FCNClassifier", "FCNRegressor", AEON_DEEP_EPOCHS, AEON_DEEP_BATCH_SIZE, {"n_filters": [16, 16, 16], "kernel_size": [3, 3, 3]}, {"n_filters": [16, 16, 16], "kernel_size": [3, 3, 3]}),
-    ]
+from corn_forecast.operator.model.families.official.aeon.deep_fcn import *  # noqa: F401,F403

@@ -1,5 +1,6 @@
-"""Dual-head direction and return model variant."""
+"""Legacy compatibility shim for `corn_forecast.modeling.losses.dual_head`.
 
-from corn_forecast.modeling.losses.variants import DualHeadMseBceModel, create_dual_head_mse_bce
+Canonical implementation: `corn_forecast.operator.model.losses.dual_head`.
+"""
 
-__all__ = ["DualHeadMseBceModel", "create_dual_head_mse_bce"]
+from corn_forecast.operator.model.losses.dual_head import *  # noqa: F401,F403

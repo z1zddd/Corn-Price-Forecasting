@@ -15,7 +15,7 @@ from corn_forecast.data.scaler import SequenceStandardizer
 from corn_forecast.data.targets import add_forward_targets
 from corn_forecast.data.windowing import make_windows
 from corn_forecast.pipeline.eval.metrics import compute_all_metrics
-from corn_forecast.modeling.registry import create_model, expand_model_configs, normalize_model_config
+from corn_forecast.operator.model.registry import create_model, expand_model_configs, normalize_model_config
 from corn_forecast.pipeline.report.verdict import build_agent_verdict
 from corn_forecast.pipeline.report.writer import write_experiment_report, write_model_outputs
 

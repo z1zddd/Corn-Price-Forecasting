@@ -1,10 +1,6 @@
-"""Regression-to-direction loss variants."""
+"""Legacy compatibility shim for `corn_forecast.modeling.losses.regression_sign`.
 
-from corn_forecast.modeling.losses.variants import RegressionSignModel, create_regression_huber_sign, create_regression_mae_sign, create_regression_mse_sign
+Canonical implementation: `corn_forecast.operator.model.losses.regression_sign`.
+"""
 
-__all__ = [
-    "RegressionSignModel",
-    "create_regression_mse_sign",
-    "create_regression_mae_sign",
-    "create_regression_huber_sign",
-]
+from corn_forecast.operator.model.losses.regression_sign import *  # noqa: F401,F403

@@ -1,5 +1,6 @@
-"""Shared model adapters."""
+"""Legacy compatibility shim for `corn_forecast.modeling.wrappers`.
 
-from corn_forecast.modeling.wrappers.torch import TorchSequenceClassifierAdapter
+Canonical implementation: `corn_forecast.operator.model.wrappers`.
+"""
 
-__all__ = ["TorchSequenceClassifierAdapter"]
+from corn_forecast.operator.model.wrappers import *  # noqa: F401,F403

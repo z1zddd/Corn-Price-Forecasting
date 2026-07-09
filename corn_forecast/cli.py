@@ -7,14 +7,6 @@ import copy
 import json
 from pathlib import Path
 
-import pandas as pd
-import yaml
-
-from corn_forecast.pipeline.backtest.engine import run_backtest
-from corn_forecast.config.loader import load_config
-from corn_forecast.data.diagnosis import diagnose_frame
-from corn_forecast.data.loader import load_commodity_csv
-
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the command parser."""
@@ -70,6 +62,10 @@ def main(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
     if args.command == "diagnose":
+        from corn_forecast.config.loader import load_config
+        from corn_forecast.data.diagnosis import diagnose_frame
+        from corn_forecast.data.loader import load_commodity_csv
+
         if args.config:
             cfg = load_config(Path(args.config), validate=True)
             data_cfg = cfg["data"]
@@ -86,12 +82,20 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return
     if args.command == "run":
+        from corn_forecast.config.loader import load_config
+        from corn_forecast.pipeline.backtest.engine import run_backtest
+
         cfg = load_config(Path(args.config), validate=True)
         comparison = run_backtest(cfg, output_dir=args.output_dir)
         print(comparison.to_string(index=False))
         print(f"comparison.csv written to {Path(args.output_dir) / 'comparison.csv'}")
         return
     if args.command == "run-lookbacks":
+        import pandas as pd
+
+        from corn_forecast.config.loader import load_config
+        from corn_forecast.pipeline.backtest.engine import run_backtest
+
         cfg = load_config(Path(args.config), validate=True)
         output_root = Path(args.output_dir)
         rows: list[dict] = []
@@ -110,6 +114,9 @@ def main(argv: list[str] | None = None) -> None:
         print(f"lookback_comparison.csv written to {output_root / 'lookback_comparison.csv'}")
         return
     if args.command == "auto-window":
+        from corn_forecast.config.loader import load_config
+        from corn_forecast.data.loader import load_commodity_csv
+
         if args.config:
             cfg = load_config(Path(args.config), validate=False)
             data_cfg = cfg["data"]
@@ -129,6 +136,10 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return
     if args.command == "build-config":
+        import yaml
+
+        from corn_forecast.config.loader import load_config
+
         cfg = load_config(Path(args.base_config), validate=False)
         cfg.setdefault("commodity", {})
         cfg["commodity"]["name"] = args.commodity_name
@@ -148,6 +159,8 @@ def main(argv: list[str] | None = None) -> None:
         print(f"config written to {output_path}")
         return
     if args.command == "compare":
+        import pandas as pd
+
         path = Path(args.experiment) / "comparison.csv"
         comparison = pd.read_csv(path)
         print(comparison.to_string(index=False))

@@ -1,6 +1,4 @@
-# Baselines
+# Legacy Baselines Path
 
-这里放最简单的基准模型，用来判断复杂模型是否真的提供增量价值。
-
-典型基准包括上一期收益、均值收益和多数方向。这里不放需要外部依赖的大模型。
+Compatibility shims for `corn_forecast.operator.model.families.baseline`.
 

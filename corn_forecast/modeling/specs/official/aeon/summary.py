@@ -1,12 +1,6 @@
-"""Summary feature official-pool spec."""
+"""Legacy compatibility shim for `corn_forecast.modeling.specs.official.aeon.summary`.
 
-from __future__ import annotations
+Canonical implementation: `corn_forecast.operator.model.families.official.aeon.summary`.
+"""
 
-from ..base import OfficialPoolSpec
-from .common import spec_pair
-
-
-def build_summary_specs() -> list[OfficialPoolSpec]:
-    return [
-        spec_pair("aeon_summary", "tsc_feature", "SummaryClassifier", "SummaryRegressor", "aeon.classification.feature_based", "aeon.regression.feature_based", {"n_jobs": 1}, {"n_jobs": 1}, "summary_random_forest", "summary_random_forest"),
-    ]
+from corn_forecast.operator.model.families.official.aeon.summary import *  # noqa: F401,F403

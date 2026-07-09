@@ -1,12 +1,6 @@
-"""MiniRocket official-pool spec."""
+"""Legacy compatibility shim for `corn_forecast.modeling.specs.official.aeon.minirocket`.
 
-from __future__ import annotations
+Canonical implementation: `corn_forecast.operator.model.families.official.aeon.minirocket`.
+"""
 
-from ..base import OfficialPoolSpec
-from .common import AEON_KERNELS, spec_pair
-
-
-def build_minirocket_specs() -> list[OfficialPoolSpec]:
-    return [
-        spec_pair("aeon_minirocket", "tsc_convolution", "MiniRocketClassifier", "MiniRocketRegressor", "aeon.classification.convolution_based", "aeon.regression.convolution_based", {"n_kernels": AEON_KERNELS, "n_jobs": 1}, {"n_kernels": AEON_KERNELS, "n_jobs": 1}, "minirocket_ridge", "minirocket_ridge", input_kind="aeon_collection_pad10"),
-    ]
+from corn_forecast.operator.model.families.official.aeon.minirocket import *  # noqa: F401,F403

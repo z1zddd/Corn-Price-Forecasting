@@ -1,3 +1,6 @@
-"""Ensemble model implementations and deployment specifications."""
+"""Legacy compatibility shim for `corn_forecast.modeling.ensembles`.
 
-from corn_forecast.modeling.ensembles.deployment import *  # noqa: F401,F403
+Canonical implementation: `corn_forecast.operator.model.families.aggregation`.
+"""
+
+from corn_forecast.operator.model.families.aggregation import *  # noqa: F401,F403

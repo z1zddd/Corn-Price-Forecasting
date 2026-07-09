@@ -1,3 +1,6 @@
-"""Model registry package."""
+"""Legacy compatibility shim for `corn_forecast.modeling.registry`.
 
-from corn_forecast.modeling.registry.factory import *  # noqa: F401,F403
+Canonical implementation: `corn_forecast.operator.model.registry`.
+"""
+
+from corn_forecast.operator.model.registry import *  # noqa: F401,F403

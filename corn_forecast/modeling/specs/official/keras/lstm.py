@@ -1,14 +1,6 @@
-"""LSTM official-pool model specs."""
+"""Legacy compatibility shim for `corn_forecast.modeling.specs.official.keras.lstm`.
 
-from __future__ import annotations
+Canonical implementation: `corn_forecast.operator.model.families.official.keras.lstm`.
+"""
 
-from ..base import OfficialPoolSpec
-from .common import keras_sequence_pair
-
-
-def build_lstm_specs() -> list[OfficialPoolSpec]:
-    return [
-        keras_sequence_pair("keras_lstm_u16", "lstm", {"units": 16}),
-        keras_sequence_pair("keras_lstm_u32", "lstm", {"units": 32}),
-        keras_sequence_pair("keras_lstm_stack2_u32", "lstm", {"units": [32, 16]}),
-    ]
+from corn_forecast.operator.model.families.official.keras.lstm import *  # noqa: F401,F403

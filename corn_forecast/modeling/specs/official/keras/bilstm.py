@@ -1,12 +1,6 @@
-"""Bidirectional LSTM official-pool model specs."""
+"""Legacy compatibility shim for `corn_forecast.modeling.specs.official.keras.bilstm`.
 
-from __future__ import annotations
+Canonical implementation: `corn_forecast.operator.model.families.official.keras.bilstm`.
+"""
 
-from ..base import OfficialPoolSpec
-from .common import keras_sequence_pair
-
-
-def build_bilstm_specs() -> list[OfficialPoolSpec]:
-    return [
-        keras_sequence_pair("keras_bilstm_u16", "bilstm", {"units": 16}),
-    ]
+from corn_forecast.operator.model.families.official.keras.bilstm import *  # noqa: F401,F403

@@ -1,12 +1,6 @@
-"""TimeSeriesForest official-pool spec."""
+"""Legacy compatibility shim for `corn_forecast.modeling.specs.official.aeon.time_series_forest`.
 
-from __future__ import annotations
+Canonical implementation: `corn_forecast.operator.model.families.official.aeon.time_series_forest`.
+"""
 
-from ..base import OfficialPoolSpec
-from .common import AEON_ESTIMATORS, spec_pair
-
-
-def build_time_series_forest_specs() -> list[OfficialPoolSpec]:
-    return [
-        spec_pair("aeon_tsf", "tsc_interval", "TimeSeriesForestClassifier", "TimeSeriesForestRegressor", "aeon.classification.interval_based", "aeon.regression.interval_based", {"n_estimators": AEON_ESTIMATORS, "min_interval_length": 1, "n_jobs": 1}, {"n_estimators": AEON_ESTIMATORS, "min_interval_length": 1, "n_jobs": 1}, "interval_forest", "interval_forest"),
-    ]
+from corn_forecast.operator.model.families.official.aeon.time_series_forest import *  # noqa: F401,F403

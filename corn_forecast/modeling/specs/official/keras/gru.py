@@ -1,12 +1,6 @@
-"""GRU official-pool model specs."""
+"""Legacy compatibility shim for `corn_forecast.modeling.specs.official.keras.gru`.
 
-from __future__ import annotations
+Canonical implementation: `corn_forecast.operator.model.families.official.keras.gru`.
+"""
 
-from ..base import OfficialPoolSpec
-from .common import keras_sequence_pair
-
-
-def build_gru_specs() -> list[OfficialPoolSpec]:
-    return [
-        keras_sequence_pair("keras_gru_u16", "gru", {"units": 16}),
-    ]
+from corn_forecast.operator.model.families.official.keras.gru import *  # noqa: F401,F403

@@ -1,12 +1,6 @@
-"""RISE official-pool spec."""
+"""Legacy compatibility shim for `corn_forecast.modeling.specs.official.aeon.rise`.
 
-from __future__ import annotations
+Canonical implementation: `corn_forecast.operator.model.families.official.aeon.rise`.
+"""
 
-from ..base import OfficialPoolSpec
-from .common import AEON_ESTIMATORS, spec_pair
-
-
-def build_rise_specs() -> list[OfficialPoolSpec]:
-    return [
-        spec_pair("aeon_rise", "tsc_interval", "RandomIntervalSpectralEnsembleClassifier", "RandomIntervalSpectralEnsembleRegressor", "aeon.classification.interval_based", "aeon.regression.interval_based", {"n_estimators": max(16, AEON_ESTIMATORS // 2), "min_interval_length": 1, "acf_lag": 1, "acf_min_values": 1, "n_jobs": 1}, {"n_estimators": max(16, AEON_ESTIMATORS // 2), "min_interval_length": 1, "acf_lag": 1, "acf_min_values": 1, "n_jobs": 1}, "rise", "rise"),
-    ]
+from corn_forecast.operator.model.families.official.aeon.rise import *  # noqa: F401,F403

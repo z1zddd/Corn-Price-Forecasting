@@ -1,3 +1,6 @@
-"""Loss-oriented model variants."""
+"""Legacy compatibility shim for `corn_forecast.modeling.losses`.
 
-from corn_forecast.modeling.losses.variants import *  # noqa: F401,F403
+Canonical implementation: `corn_forecast.operator.model.losses`.
+"""
+
+from corn_forecast.operator.model.losses import *  # noqa: F401,F403

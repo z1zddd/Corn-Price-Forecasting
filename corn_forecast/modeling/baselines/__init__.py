@@ -1,5 +1,6 @@
-"""Baseline model implementations."""
+"""Legacy compatibility shim for `corn_forecast.modeling.baselines`.
 
-from corn_forecast.modeling.baselines.simple import LastReturnBaseline, MeanDirectionBaseline
+Canonical implementation: `corn_forecast.operator.model.families.baseline`.
+"""
 
-__all__ = ["LastReturnBaseline", "MeanDirectionBaseline"]
+from corn_forecast.operator.model.families.baseline import *  # noqa: F401,F403
