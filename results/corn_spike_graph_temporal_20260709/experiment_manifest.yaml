@@ -1,0 +1,95 @@
+experiment:
+  name: corn_spike_graph_temporal
+  snapshot_date: "2026-07-09"
+  source_root: "/Users/keyizhan/Downloads/corn_spike_official_pool_results/graph_goal_current"
+  destination: "results/corn_spike_graph_temporal_20260709"
+
+data:
+  commodity: corn
+  target_family: spike_direction_and_return_health
+  feature_sets:
+    - no_pca
+    - with_pca
+  split_protocol: rolling_or_expanding_framework_comparisons
+  leakage_boundary: train_only_graph_fitting
+
+windowing:
+  horizons:
+    - 1
+    - 2
+  lookbacks: "as recorded per row in leaderboard"
+  train_window_mode: "as recorded per row in leaderboard"
+  min_train_periods: "as recorded per row in leaderboard"
+
+operator_layers:
+  graph_builders:
+    - corr_abs_top3
+    - corr_abs_top5
+    - corr_abs_top8
+    - spearman_abs_top5
+    - knn_cosine_top5
+    - knn_euclidean_top5
+    - glasso_alpha05
+    - glasso_alpha10
+    - group_prefix
+  transforms:
+    - smooth_only
+    - raw_smooth
+    - raw_residual
+    - raw_diffuse2
+    - graph_stats
+    - centrality_pool
+    - spectral_lowpass
+    - spectral_residual
+    - spectral_bands
+    - visibility_nvg_stats
+    - visibility_hvg_stats
+    - recurrence_plot_stats
+    - recurrence_plot_flat
+    - vmd_expansion
+
+complete_models:
+  graph_temporal:
+    - mtgnn
+    - graph_wavenet
+    - dcrnn
+    - stgcn
+    - agcrn
+    - grugcn
+    - astgcn
+    - mstgcn
+
+objectives:
+  - direction_bce
+  - return_mse
+  - return_sign_bce
+
+leaderboards:
+  strict_leaderboard.csv:
+    rows: 6644
+    description: all strict framework graph-temporal comparison rows
+  healthy_leaderboard.csv:
+    rows: 2164
+    description: rows passing health filters
+  healthy_robust30_leaderboard.csv:
+    rows: 2164
+    description: healthy rows with robust30 flag
+  excluded_high_scores.csv:
+    rows: 377
+    description: high-scoring rows excluded by health or robust30 filters
+
+metrics:
+  - BalancedAcc
+  - AUC
+  - AP
+  - DirAcc
+  - R2_health
+  - pred_rows
+
+exclusion_rules:
+  - pred_rows < 30
+  - R2_health < -0.1
+  - constant prediction
+  - agent_pass != true
+  - health_flag != true
+  - robust30_flag != true
