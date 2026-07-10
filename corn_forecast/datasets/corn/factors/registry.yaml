@@ -1,0 +1,93 @@
+version: 1
+instrument: corn
+description: Registry for corn factor definitions and long-form factor values.
+
+storage:
+  library_root: library
+  matrix_root: matrix
+  value_schema:
+    - period_end
+    - period_key
+    - frequency
+    - instrument
+    - factor_id
+    - value
+    - coverage
+    - asof_date
+    - quality_flag
+    - source_version
+
+factors:
+  price_momentum:
+    path: library/price_momentum
+    group: price
+    default_enabled: true
+    frequencies: [weekly, monthly, yearly]
+    outputs: [price_momentum]
+
+  basis_tightness:
+    path: library/basis_tightness
+    group: basis
+    default_enabled: true
+    frequencies: [weekly, monthly, yearly]
+    outputs: [basis_tightness]
+
+  processing_demand:
+    path: library/processing_demand
+    group: demand
+    default_enabled: true
+    frequencies: [weekly, monthly, yearly]
+    outputs: [processing_demand]
+
+  market_activity:
+    path: library/market_activity
+    group: market
+    default_enabled: true
+    frequencies: [weekly, monthly, yearly]
+    outputs: [market_activity]
+
+  external_support:
+    path: library/external_support
+    group: external
+    default_enabled: true
+    frequencies: [weekly, monthly, yearly]
+    outputs: [external_support]
+
+  weather_anomaly:
+    path: library/weather_anomaly
+    group: weather
+    default_enabled: true
+    frequencies: [weekly, monthly, yearly]
+    outputs: [weather_anomaly]
+
+  supply_pressure:
+    path: library/supply_pressure
+    group: supply
+    default_enabled: true
+    frequencies: [weekly, monthly, yearly]
+    outputs: [supply_pressure]
+
+  risk_volatility:
+    path: library/risk_volatility
+    group: risk
+    default_enabled: true
+    frequencies: [weekly, monthly, yearly]
+    outputs: [risk_volatility]
+
+  harvest_pressure:
+    path: library/harvest_pressure
+    group: harvest
+    default_enabled: true
+    frequencies: [weekly, monthly, yearly]
+    outputs: [harvest_pressure]
+    notes:
+      - Source matrices do not currently include factor_harvest_pressure_coverage.
+
+  seasonal:
+    path: library/seasonal
+    group: calendar
+    default_enabled: true
+    frequencies: [weekly, monthly, yearly]
+    outputs: [seasonal_sin, seasonal_cos]
+    notes:
+      - Calendar encodings are grouped together because they are two outputs of one seasonal transform.

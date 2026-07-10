@@ -1,0 +1,21 @@
+id: harvest_pressure
+name: 收获压力因子
+group: harvest
+instrument: corn
+frequencies: [weekly, monthly, yearly]
+inputs:
+  - dce_corn_close
+calculation:
+  method: derived_from_existing_matrix
+  expression: factor_harvest_pressure
+leakage_control:
+  uses_future_target: false
+  requires_lag: true
+  asof_policy: period_end
+quality:
+  coverage_column: null
+outputs:
+  - factor_id: harvest_pressure
+    value_column: factor_harvest_pressure
+notes:
+  - Source matrices do not currently include factor_harvest_pressure_coverage, so values.csv keeps coverage blank.

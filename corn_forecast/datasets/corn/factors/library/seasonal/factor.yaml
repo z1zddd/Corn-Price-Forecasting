@@ -1,0 +1,24 @@
+id: seasonal
+name: 季节性编码因子
+group: calendar
+instrument: corn
+frequencies: [weekly, monthly, yearly]
+inputs:
+  - period_end
+  - period_key
+calculation:
+  method: derived_from_existing_matrix
+  expression: seasonal_sin, seasonal_cos
+leakage_control:
+  uses_future_target: false
+  requires_lag: false
+  asof_policy: period_end
+quality:
+  coverage_column: null
+outputs:
+  - factor_id: seasonal_sin
+    value_column: seasonal_sin
+  - factor_id: seasonal_cos
+    value_column: seasonal_cos
+notes:
+  - Seasonal sine and cosine are stored in one directory because they form one calendar encoding pair.

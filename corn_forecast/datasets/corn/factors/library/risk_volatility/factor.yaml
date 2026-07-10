@@ -1,0 +1,19 @@
+id: risk_volatility
+name: 风险波动因子
+group: risk
+instrument: corn
+frequencies: [weekly, monthly, yearly]
+inputs:
+  - dce_corn_close
+calculation:
+  method: derived_from_existing_matrix
+  expression: factor_risk_volatility
+leakage_control:
+  uses_future_target: false
+  requires_lag: true
+  asof_policy: period_end
+quality:
+  coverage_column: factor_risk_volatility_coverage
+outputs:
+  - factor_id: risk_volatility
+    value_column: factor_risk_volatility
