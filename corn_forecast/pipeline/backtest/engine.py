@@ -107,9 +107,11 @@ def run_backtest(config: dict, *, output_dir: str | Path) -> pd.DataFrame:
             meta_target_dates = pd.to_datetime(meta["target_date"]) if "target_date" in meta.columns else None
 
             run_model_cfg = dict(model_cfg)
-            if model_cfg.get("name") == "dual_stream_lstm" or model_cfg.get("type") == "dual_stream_lstm":
+            feature_aware_models = {"dual_stream_lstm", "simpletm", "timemixer", "tide", "xlinear"}
+            if model_cfg.get("name") in feature_aware_models or model_cfg.get("type") in feature_aware_models:
                 params = dict(run_model_cfg.get("params") or {})
                 params.setdefault("feature_cols", feature_cols)
+                params.setdefault("target_feature_name", data_cfg["price_col"])
                 run_model_cfg["params"] = params
             model = create_model(run_model_cfg)
             if hasattr(model, "fit_with_targets"):

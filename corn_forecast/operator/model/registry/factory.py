@@ -26,6 +26,10 @@ MODEL_TYPE_ALIASES = {
     "itransformer": "itransformer",
     "dlinear": "dlinear",
     "dual_stream_lstm": "dual_stream_lstm",
+    "simpletm": "simpletm",
+    "timemixer": "timemixer",
+    "tide": "tide",
+    "xlinear": "xlinear",
 }
 
 

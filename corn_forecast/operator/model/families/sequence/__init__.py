@@ -5,7 +5,19 @@ from __future__ import annotations
 from importlib import import_module
 
 
-DEEP_MODEL_NAMES = {"lstm", "gru", "transformer", "patchtst", "itransformer", "dlinear", "dual_stream_lstm"}
+DEEP_MODEL_NAMES = {
+    "lstm",
+    "gru",
+    "transformer",
+    "patchtst",
+    "itransformer",
+    "dlinear",
+    "dual_stream_lstm",
+    "simpletm",
+    "timemixer",
+    "tide",
+    "xlinear",
+}
 
 _FACTORIES = {
     "lstm": ("corn_forecast.operator.model.families.sequence.lstm", "create_lstm"),
@@ -15,6 +27,10 @@ _FACTORIES = {
     "itransformer": ("corn_forecast.operator.model.families.sequence.itransformer", "create_itransformer"),
     "dlinear": ("corn_forecast.operator.model.families.sequence.dlinear", "create_dlinear"),
     "dual_stream_lstm": ("corn_forecast.operator.model.families.sequence.dual_stream_lstm", "create_dual_stream_lstm"),
+    "simpletm": ("corn_forecast.operator.model.families.sequence.simpletm", "create_simpletm"),
+    "timemixer": ("corn_forecast.operator.model.families.sequence.timemixer", "create_timemixer"),
+    "tide": ("corn_forecast.operator.model.families.sequence.tide", "create_tide"),
+    "xlinear": ("corn_forecast.operator.model.families.sequence.xlinear", "create_xlinear"),
 }
 
 
