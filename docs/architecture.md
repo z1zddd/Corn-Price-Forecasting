@@ -32,9 +32,9 @@ time-series model = operator + datasets
 - `pipeline` orchestrates workflow: training, backtesting, evaluation,
   reporting, and scheduling. Pipeline code does not define model families.
 
-The root-level `datasets/` directory remains the repository-compatible sample
-data area used by existing configs. `corn_forecast/datasets/` is the
-framework-internal material definition layer.
+Corn CSV fixtures and material documentation live under
+`corn_forecast/datasets/corn/`. The old root-level `datasets/` directory has
+been folded into that canonical corn material area.
 
 ## Package Layout
 
@@ -48,7 +48,7 @@ framework-internal material definition layer.
       registry.py   lightweight material registry
       schema.py     lightweight schema declarations
       corn/         corn-specific material docs and schema contracts
-    data/
+    data_processing/
       loader.py     load CSVs with encoding fallback and select features
       targets.py    derive future price, return, and direction targets
       windowing.py  turn tabular rows into lookback windows
@@ -75,16 +75,15 @@ Corn materials are organized as:
 
 ```text
 corn_forecast/datasets/corn/
-  raw/                 source-like materials and source notes
-  processed/           cleaned monthly modeling table contracts
+  raw/                 source-like corn CSV fixtures and source notes
+  processed/           cleaned monthly modeling tables loaded by configs
   factors/             factor group notes such as futures, spot, weather, news PCA
   prediction_library/  completed rolling prediction streams
   metadata/            schema and lineage documents
 ```
 
 Generated experiment outputs, model weights, compressed archives, and private
-enterprise data should stay out of both `corn_forecast/datasets/` and the
-root-level `datasets/` directory.
+enterprise data should stay out of `corn_forecast/datasets/`.
 
 ## Backtest Flow
 

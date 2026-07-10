@@ -34,8 +34,8 @@ PCA/news columns:
 - No-news configs exclude `pca_*` and `PCA*`.
 - With-news configs keep those PCA/news columns as part of the material.
 
-Compatibility:
+Canonical location:
 
-- Current configs still read root-level CSV files under `datasets/`.
-- `corn_forecast/datasets/` documents material contracts without changing those
-  paths in this phase.
+- Current corn configs read monthly fixtures from
+  `corn_forecast/datasets/corn/processed/`.
+- Raw/source-like corn fixtures live in `corn_forecast/datasets/corn/raw/`.

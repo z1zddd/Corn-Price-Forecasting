@@ -28,7 +28,7 @@ python -m venv .venv
 ## 快速开始
 
 ```bash
-commodity-backtest diagnose --csv datasets/corn_sample_data.csv --date-col date
+commodity-backtest diagnose --csv corn_forecast/datasets/corn/processed/corn_sample_data.csv --date-col date
 commodity-backtest diagnose --config configs/corn.yaml
 commodity-backtest auto-window --config configs/corn.yaml
 commodity-backtest build-config --base-config configs/template.yaml --output configs/my_commodity.yaml --commodity-name my_commodity --csv local_data/my.csv --date-col date --price-col close
@@ -46,11 +46,11 @@ commodity-backtest interpret --experiment experiments/manual_run
 corn_forecast/          框架主包
   cli.py                命令行入口
   config/               YAML 配置读取与校验
-  data/                 CSV 读取、目标生成、特征选择和窗口构造
+  data_processing/      CSV 读取、目标生成、特征选择和窗口构造
+  datasets/corn/        玉米 raw、processed、factor、prediction library 和 metadata 材料
   pipeline/             回测、训练、评估和报告流程
   modeling/             模型、模型池、损失变体、registry、wrapper 和 ensemble
 configs/                模板和官方实验配置
-datasets/               小型仓库内数据资产
 scripts/                实验、搜索、验证和维护脚本
 docs/                   架构、配置和实验说明
 local_data/             本地原始数据目录，默认不提交到 git
@@ -80,7 +80,7 @@ experiments/manual_run/
 
 ## 切换到其他商品
 
-1. 将新的 CSV 放到 `local_data/` 或其他本地路径。`local_data/` 默认被 git 忽略，避免和代码模块 `data/` 混淆。
+1. 将新的 CSV 放到 `local_data/` 或其他本地路径。`local_data/` 默认被 git 忽略，避免和包内数据材料混淆。
 2. 复制 `configs/template.yaml`，也可以从 `configs/soybean.yaml` 或 `configs/rebar.yaml` 开始修改。
 3. 更新 `commodity.name`、`data.csv_path`、`data.date_col`、`data.price_col` 和特征设置。
 4. 运行 `commodity-backtest diagnose --csv <path> --date-col <date_col>` 检查数据。

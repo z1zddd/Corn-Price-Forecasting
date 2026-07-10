@@ -4,7 +4,7 @@ commodity:
   frequency: monthly
 
 data:
-  csv_path: datasets/玉米价格月度_混合特征无缺失值双头LSTM版.csv
+  csv_path: corn_forecast/datasets/corn/processed/玉米价格月度_混合特征无缺失值双头LSTM版.csv
   date_col: month
   date_format: "%y-%b"
   price_col: dce_corn_close

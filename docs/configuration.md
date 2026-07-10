@@ -38,7 +38,7 @@ models:
 
 ```yaml
 data:
-  csv_path: datasets/corn_sample_data.csv
+  csv_path: corn_forecast/datasets/corn/processed/corn_sample_data.csv
   date_col: date
   date_format: "%Y-%m-%d"
   price_col: close

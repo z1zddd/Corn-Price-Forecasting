@@ -63,8 +63,8 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     if args.command == "diagnose":
         from corn_forecast.config.loader import load_config
-        from corn_forecast.data.diagnosis import diagnose_frame
-        from corn_forecast.data.loader import load_commodity_csv
+        from corn_forecast.data_processing.diagnosis import diagnose_frame
+        from corn_forecast.data_processing.loader import load_commodity_csv
 
         if args.config:
             cfg = load_config(Path(args.config), validate=True)
@@ -115,7 +115,7 @@ def main(argv: list[str] | None = None) -> None:
         return
     if args.command == "auto-window":
         from corn_forecast.config.loader import load_config
-        from corn_forecast.data.loader import load_commodity_csv
+        from corn_forecast.data_processing.loader import load_commodity_csv
 
         if args.config:
             cfg = load_config(Path(args.config), validate=False)

@@ -4,7 +4,7 @@ commodity:
   frequency: monthly
 
 data:
-  csv_path: datasets/corn_sample_data.csv
+  csv_path: corn_forecast/datasets/corn/processed/corn_sample_data.csv
   date_col: date
   price_col: close
   feature_cols: auto_numeric
