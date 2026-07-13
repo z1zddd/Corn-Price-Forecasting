@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "monthly_v1_seasonal",
+  "version": "monthly_v1",
+  "status": "candidate",
+  "instrument": "corn",
+  "frequency": "monthly",
+  "group": "calendar",
+  "source": {
+    "dataset": "corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv",
+    "source_version": "corn_monthly_v1",
+    "inputs": [
+      "month"
+    ]
+  },
+  "prediction_contract": {
+    "factor_period": "month_t",
+    "target_period": "month_t_plus_1",
+    "publication_lag_months": 0,
+    "availability_rule": "Calendar encoding is known before month t.",
+    "uses_future_target": false
+  },
+  "missing_value_policy": {
+    "preserve_insufficient_history": true,
+    "backward_fill": false,
+    "two_sided_interpolation": false
+  },
+  "outputs": [
+    {
+      "factor_id": "seasonal_sin",
+      "expression": "sin(2 * pi * calendar_month / 12)",
+      "minimum_history_months": 1
+    },
+    {
+      "factor_id": "seasonal_cos",
+      "expression": "cos(2 * pi * calendar_month / 12)",
+      "minimum_history_months": 1
+    }
+  ]
+}
