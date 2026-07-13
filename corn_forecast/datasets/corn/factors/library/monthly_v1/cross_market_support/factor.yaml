@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "monthly_v1_cross_market_support",
+  "version": "monthly_v1",
+  "status": "candidate",
+  "instrument": "corn",
+  "frequency": "monthly",
+  "group": "external",
+  "source": {
+    "dataset": "corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv",
+    "source_version": "corn_monthly_v1",
+    "inputs": [
+      "dce_corn_close",
+      "cbot_corn_close_last"
+    ]
+  },
+  "prediction_contract": {
+    "factor_period": "month_t",
+    "target_period": "month_t_plus_1",
+    "publication_lag_months": 0,
+    "availability_rule": "Month-t exchange closes are available at the prediction cutoff.",
+    "uses_future_target": false
+  },
+  "missing_value_policy": {
+    "preserve_insufficient_history": true,
+    "backward_fill": false,
+    "two_sided_interpolation": false
+  },
+  "outputs": [
+    {
+      "factor_id": "cbot_corn_momentum_1m",
+      "expression": "cbot_close_t / cbot_close_t_minus_1 - 1",
+      "minimum_history_months": 2
+    },
+    {
+      "factor_id": "domestic_minus_cbot_momentum_1m",
+      "expression": "dce_return_1m - cbot_return_1m",
+      "minimum_history_months": 2
+    }
+  ]
+}
