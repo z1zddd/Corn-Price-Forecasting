@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "id": "monthly_v1_price_trend",
+  "version": "monthly_v1",
+  "status": "candidate",
+  "instrument": "corn",
+  "frequency": "monthly",
+  "group": "price",
+  "source": {
+    "dataset": "corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv",
+    "source_version": "corn_monthly_v1",
+    "inputs": [
+      "dce_corn_close"
+    ]
+  },
+  "prediction_contract": {
+    "factor_period": "month_t",
+    "target_period": "month_t_plus_1",
+    "publication_lag_months": 0,
+    "availability_rule": "DCE month-t close is available after the month-t close.",
+    "uses_future_target": false
+  },
+  "missing_value_policy": {
+    "preserve_insufficient_history": true,
+    "backward_fill": false,
+    "two_sided_interpolation": false
+  },
+  "outputs": [
+    {
+      "factor_id": "price_momentum_1m",
+      "expression": "close_t / close_t_minus_1 - 1",
+      "minimum_history_months": 2
+    },
+    {
+      "factor_id": "price_momentum_3m",
+      "expression": "close_t / close_t_minus_3 - 1",
+      "minimum_history_months": 4
+    },
+    {
+      "factor_id": "price_ma_gap_6m",
+      "expression": "close_t / mean(close_t_minus_5_to_t) - 1",
+      "minimum_history_months": 6
+    }
+  ]
+}
