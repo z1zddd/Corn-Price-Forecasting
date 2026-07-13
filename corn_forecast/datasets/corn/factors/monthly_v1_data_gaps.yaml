@@ -1,0 +1,115 @@
+version: monthly_v1
+scope: monthly_corn_factors
+status: active
+weekly_and_yearly_scope: deferred
+
+timing_policy:
+  prediction_contract: Use month-t factors to predict month t+1.
+  known_gap: Spot, basis, and 100PPI fields do not have tracked publication timestamps.
+  temporary_control: Use a one-month lag for those fields until timestamped releases are available.
+
+gaps:
+  - id: publication_timestamps
+    priority: critical
+    status: partially_mitigated
+    missing_data:
+      - source publication timestamp
+      - revision timestamp
+      - data vintage identifier
+    affected_factors: [basis_tightness, term_structure]
+    current_control: one_month_lag
+    required_next_step: Store source_time, release_time, ingestion_time, and vintage for every observation.
+
+  - id: physical_inventory_and_receipts
+    priority: critical
+    status: missing
+    missing_data:
+      - port inventory
+      - commercial inventory
+      - futures warehouse receipts
+      - regional grain stocks
+    intended_factor_family: supply_pressure
+    required_next_step: Add timestamped weekly or monthly levels and changes with source provenance.
+
+  - id: production_expectations
+    priority: critical
+    status: missing
+    missing_data:
+      - planted acreage
+      - yield forecast
+      - production forecast
+      - crop condition and harvest progress
+    intended_factor_family: supply_pressure
+    required_next_step: Preserve every published vintage instead of overwriting with revised values.
+
+  - id: policy_imports_and_auctions
+    priority: high
+    status: missing
+    missing_data:
+      - monthly imports
+      - state reserve auctions
+      - reserve releases
+      - tariff and quota changes
+    intended_factor_family: policy_supply_shock
+    required_next_step: Record announcement time separately from effective time.
+
+  - id: processing_and_margin_fundamentals
+    priority: high
+    status: missing
+    missing_data:
+      - starch processing operating rate
+      - ethanol operating rate
+      - measured processing margin
+      - industrial corn consumption
+    intended_factor_family: processing_demand
+    current_proxy: starch_corn_spread_ratio
+    limitation: The current futures spread is not a measured margin or demand series.
+
+  - id: feed_demand
+    priority: high
+    status: missing
+    missing_data:
+      - hog inventory
+      - sow inventory
+      - poultry inventory
+      - feed production
+      - feed enterprise corn consumption
+    intended_factor_family: feed_demand
+    required_next_step: Use only releases available by each historical month-end.
+
+  - id: futures_curve_and_roll
+    priority: high
+    status: incomplete
+    missing_data:
+      - contract-level prices
+      - delivery month
+      - dominant-contract mapping by date
+      - roll dates and roll rule
+    intended_factor_family: term_structure
+    current_proxy: lagged_100ppi_nearby_vs_main
+    limitation: A nearby/main proxy cannot fully represent the futures curve or roll yield.
+
+  - id: forecast_weather_and_crop_stress
+    priority: medium
+    status: missing
+    missing_data:
+      - point-in-time weather forecasts
+      - soil moisture
+      - drought index
+      - growing degree days
+      - crop-stage regional exposure weights
+    intended_factor_family: expected_weather_risk
+    current_proxy: realized_weather_anomaly
+    limitation: Realized month-t weather explains conditions but is not a forward weather forecast.
+
+  - id: timestamped_policy_and_news
+    priority: medium
+    status: missing
+    missing_data:
+      - original articles or announcements
+      - publication timestamp
+      - source identity
+      - fold-local text embedding or PCA pipeline
+    intended_factor_family: policy_and_news
+    excluded_material: corn_monthly_news_legacy.csv
+    limitation: Legacy PCA fields have unknown provenance and are not strict-backtest eligible.
