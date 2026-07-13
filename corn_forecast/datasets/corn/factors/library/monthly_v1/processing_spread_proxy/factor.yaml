@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "monthly_v1_processing_spread_proxy",
+  "version": "monthly_v1",
+  "status": "candidate",
+  "instrument": "corn",
+  "frequency": "monthly",
+  "group": "processing",
+  "source": {
+    "dataset": "corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv",
+    "source_version": "corn_monthly_v1",
+    "inputs": [
+      "cs_c_spread_close_last",
+      "dce_corn_close"
+    ]
+  },
+  "prediction_contract": {
+    "factor_period": "month_t",
+    "target_period": "month_t_plus_1",
+    "publication_lag_months": 0,
+    "availability_rule": "Both DCE settlement proxies are available after the month-t close.",
+    "uses_future_target": false
+  },
+  "missing_value_policy": {
+    "preserve_insufficient_history": true,
+    "backward_fill": false,
+    "two_sided_interpolation": false
+  },
+  "outputs": [
+    {
+      "factor_id": "starch_corn_spread_ratio",
+      "expression": "(starch_close_t - corn_close_t) / corn_close_t",
+      "minimum_history_months": 1
+    }
+  ],
+  "notes": [
+    "This is a futures spread proxy, not a measured processing margin or processing demand series."
+  ]
+}
