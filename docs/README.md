@@ -11,3 +11,4 @@
 - [Configuration](configuration.md)
 - [Official Model Pool](official-model-pool.md)
 - [Leakage-Aware Ensemble Search](ensemble-search.md)
+- [Corn Monthly Dataset v1](corn-monthly-v1.md)：月度核心数据、旧 PCA 隔离表、生成流程和严格回测使用规则。
