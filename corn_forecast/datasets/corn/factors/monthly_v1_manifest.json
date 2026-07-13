@@ -1,0 +1,92 @@
+{
+  "factor_set": "monthly_v1",
+  "status": "candidate",
+  "frequency": "monthly",
+  "prediction_contract": "Use factors from month t to predict month t+1.",
+  "source": "corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv",
+  "source_sha256": "c42dd3700f0c7961387802961650d7c82fa9fb5a2b2745affcced3563750cff9",
+  "matrix": "corn_forecast/datasets/corn/factors/matrix/corn_factors_monthly_v1.csv",
+  "matrix_sha256": "5b051a60cb7236ada636e380c38ab08b6b49e35e11fa7892f09dcd7dbd0f4366",
+  "rows": 121,
+  "candidate_factor_count": 21,
+  "complete_periods": 119,
+  "incomplete_periods": [
+    "2016-06-01",
+    "2026-06-01"
+  ],
+  "factor_families": {
+    "price_trend": [
+      "price_momentum_1m",
+      "price_momentum_3m",
+      "price_ma_gap_6m"
+    ],
+    "risk_volatility": [
+      "price_range_1m",
+      "price_volatility_3m",
+      "volatility_ratio_3m_12m"
+    ],
+    "market_activity": [
+      "volume_log_change_1m",
+      "open_interest_log_change_1m"
+    ],
+    "basis_tightness": [
+      "basis_rate_level_lag1",
+      "basis_rate_zscore_12m_lag1"
+    ],
+    "term_structure": [
+      "nearby_main_spread_ratio_lag1",
+      "nearby_main_spread_change_1m_lag1"
+    ],
+    "processing_spread_proxy": [
+      "starch_corn_spread_ratio"
+    ],
+    "cross_market_support": [
+      "cbot_corn_momentum_1m",
+      "domestic_minus_cbot_momentum_1m"
+    ],
+    "realized_weather_anomaly": [
+      "precip_anomaly_same_month",
+      "temperature_anomaly_same_month",
+      "hot_dry_weather_stress"
+    ],
+    "harvest_season_proxy": [
+      "harvest_season_share"
+    ],
+    "seasonal": [
+      "seasonal_sin",
+      "seasonal_cos"
+    ]
+  },
+  "definition_sha256": {
+    "price_trend": "14f9c4d1d4896bfea80c3bc07d13a4b302001b1815b9d19155bc22d09b7b9747",
+    "risk_volatility": "726f4d3c1e6b7e5781d42fb03066e2b63f78b9ec0259ef2345de26ba1b7f666e",
+    "market_activity": "b5ce1b17e48e253f033efd0c8f7f20467d5707aa516d083584629bdf5c021154",
+    "basis_tightness": "889559cc172a5671aad0b41f7f937ca6bdf35c5359276dbadc8cf87bd461f0da",
+    "term_structure": "2a1376c7b7c98594f9c5bd9d81a0e7c26941691529f1012e8335bc7e24d26e67",
+    "processing_spread_proxy": "2ccb8f5e2af2535fe0957bae7909b0cd464f9befbd4dcff21f66898a8dcb14d5",
+    "cross_market_support": "539b52d273e13fd4054acc2f6dcc7e9a7adac02ccfe6f75be104f968bf870fd6",
+    "realized_weather_anomaly": "df3403887189862967e88a62f65b75acb396b3102470c624e170e1f2c336b27a",
+    "harvest_season_proxy": "0a2a20975452f9af78138a3231e19bf4f9716a098f267b67c5854d2d0dc641a0",
+    "seasonal": "9350f0eb1a9ab1a1645ac9510daad798130188d37a18546e94fe3424a9173782"
+  },
+  "values_sha256": {
+    "price_trend": "fc867a03d28870b2e56362390cca9b025a74feb307477606a42975605549ca17",
+    "risk_volatility": "07f2c7ee5a6199c40d124e265bfbc14a1d00c6502a2f68b8905255290bbfd6e9",
+    "market_activity": "5747231b1c83b380f2b88fd9d5f1d62381a7e23f5180eff4c0ff75e54ec2749c",
+    "basis_tightness": "08c0dc3b51a582ca7ca82215ac59fdddac5fd2bc488cebd5ae6a8bf598d6f659",
+    "term_structure": "c01dd741e57d237200dc38a71dbdb5d63a0a06c6910c591ba41afa0e150fcf97",
+    "processing_spread_proxy": "2599be4de19c73b3c704230c3b70d2dbb9c298bcfe255acc72468acc601d1150",
+    "cross_market_support": "f862c8919e8082e3aac58f5e2ec007242af19a746fcc3ca263130cbb911a0c80",
+    "realized_weather_anomaly": "0ea0a2a55a3127052b843b6d071a9ca463d0f059273e86e3b58fce6f584dc736",
+    "harvest_season_proxy": "b4abc80ac535f7851f5ddc43daea59d54ce358ffc12ce11ceee401dc64f050c0",
+    "seasonal": "cad1eeed2e424e14f72757e0234cd3aac4d66387d67dd2408cda12a15ceaffcc"
+  },
+  "target_columns_included": false,
+  "backward_fill_used": false,
+  "two_sided_interpolation_used": false,
+  "spot_basis_and_100ppi_lag_months": 1,
+  "weather_baseline_policy": "Prior years from the same calendar month only.",
+  "supply_pressure_enabled": false,
+  "weekly_or_yearly_files_modified": false,
+  "training_policy": "Fit scaling, winsorization, imputation, and feature selection inside each training fold."
+}
