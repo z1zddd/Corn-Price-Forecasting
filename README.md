@@ -40,6 +40,18 @@ commodity-backtest interpret --experiment experiments/manual_run
 
 默认运行结果会写入 `experiments/manual_run/`。该目录已被 git 忽略，用于避免把本地实验产物提交到仓库。
 
+## 玉米月度数据集 v1
+
+仓库提供一套从日频原始数据重新聚合、避免未来回填的月度特征材料：
+
+- `corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv`：推荐用于新实验的核心月度特征，不含 PCA 和未来目标列。
+- `corn_forecast/datasets/corn/processed/corn_monthly_news_legacy.csv`：从旧月度表隔离出的 32 个 PCA 特征，仅用于单独的增量对照实验。
+- `corn_forecast/datasets/corn/processed/corn_monthly_v1_manifest.json`：记录输入哈希、数据截止日、不完整月份和生成策略。
+
+使用前应排除 `is_complete_period=false` 的月份，并由回测流程根据 `dce_corn_close` 和预测期限生成目标。当前 `configs/corn.yaml` 和官方模型池配置仍指向旧月度数据，尚未自动切换到 v1 数据集。
+
+运行 `python scripts/build_corn_monthly_dataset.py` 可以重复生成这套数据。详细字段、限制和验证结果见 [玉米月度数据集 v1 说明](docs/corn-monthly-v1.md)。
+
 ## 项目结构
 
 ```text
@@ -145,6 +157,7 @@ pip install -e .[deep]
 - [57 模型池](docs/official-model-pool.md)
 - [无泄漏组合搜索](docs/ensemble-search.md)
 - [Agent 工作流](docs/agent-workflow.md)
+- [玉米月度数据集 v1](docs/corn-monthly-v1.md)
 
 ## 验证
 
