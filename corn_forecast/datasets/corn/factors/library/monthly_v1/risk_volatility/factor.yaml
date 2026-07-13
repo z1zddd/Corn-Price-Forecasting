@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "monthly_v1_risk_volatility",
+  "version": "monthly_v1",
+  "status": "candidate",
+  "instrument": "corn",
+  "frequency": "monthly",
+  "group": "risk",
+  "source": {
+    "dataset": "corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv",
+    "source_version": "corn_monthly_v1",
+    "inputs": [
+      "dce_corn_month_range_pct",
+      "dce_corn_close"
+    ]
+  },
+  "prediction_contract": {
+    "factor_period": "month_t",
+    "target_period": "month_t_plus_1",
+    "publication_lag_months": 0,
+    "availability_rule": "DCE month-t OHLC is available after the month-t close.",
+    "uses_future_target": false
+  },
+  "missing_value_policy": {
+    "preserve_insufficient_history": true,
+    "backward_fill": false,
+    "two_sided_interpolation": false
+  },
+  "outputs": [
+    {
+      "factor_id": "price_range_1m",
+      "expression": "(monthly_high - monthly_low) / monthly_close",
+      "minimum_history_months": 1
+    },
+    {
+      "factor_id": "price_volatility_3m",
+      "expression": "std(monthly_return_t_minus_2_to_t)",
+      "minimum_history_months": 4
+    },
+    {
+      "factor_id": "volatility_ratio_3m_12m",
+      "expression": "volatility_3m / volatility_12m",
+      "minimum_history_months": 13
+    }
+  ]
+}
