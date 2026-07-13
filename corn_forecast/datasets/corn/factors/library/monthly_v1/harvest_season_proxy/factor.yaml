@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "monthly_v1_harvest_season_proxy",
+  "version": "monthly_v1",
+  "status": "candidate",
+  "instrument": "corn",
+  "frequency": "monthly",
+  "group": "harvest",
+  "source": {
+    "dataset": "corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv",
+    "source_version": "corn_monthly_v1",
+    "inputs": [
+      "is_harvest_season_ne_cn_share"
+    ]
+  },
+  "prediction_contract": {
+    "factor_period": "month_t",
+    "target_period": "month_t_plus_1",
+    "publication_lag_months": 0,
+    "availability_rule": "Deterministic calendar share for month t.",
+    "uses_future_target": false
+  },
+  "missing_value_policy": {
+    "preserve_insufficient_history": true,
+    "backward_fill": false,
+    "two_sided_interpolation": false
+  },
+  "outputs": [
+    {
+      "factor_id": "harvest_season_share",
+      "expression": "share_of_observations_marked_as_northeast_china_harvest_season",
+      "minimum_history_months": 1
+    }
+  ],
+  "notes": [
+    "This is a calendar proxy and is not observed harvest progress."
+  ]
+}
