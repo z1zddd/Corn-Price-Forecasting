@@ -1,0 +1,21 @@
+{
+  "dataset_version": "corn_monthly_v1",
+  "raw_source": "corn_forecast\\datasets\\corn\\raw\\玉米价格原始数据.csv",
+  "raw_sha256": "3368aff139263a3ba811c16e63338aaedd7c53c2e1c554c47f04c5f381c8d9b2",
+  "legacy_news_source": "corn_forecast\\datasets\\corn\\processed\\玉米价格月度_混合特征无缺失值双头LSTM版.csv",
+  "legacy_news_sha256": "40b3feeca1ff2f0e039e1a27c9f043e3751126e679003ab49c5eeb3b85ec3802",
+  "data_cutoff": "2026-06-26",
+  "core_rows": 121,
+  "core_columns": 94,
+  "news_rows": 121,
+  "pca_columns": 32,
+  "incomplete_months": [
+    "2016-06-01",
+    "2026-06-01"
+  ],
+  "target_columns_included": false,
+  "backward_fill_used": false,
+  "two_sided_interpolation_used": false,
+  "news_source_status": "legacy_unknown_provenance",
+  "strict_backtest_policy": "Use core features only. Legacy PCA columns require provenance and fold-local generation."
+}
