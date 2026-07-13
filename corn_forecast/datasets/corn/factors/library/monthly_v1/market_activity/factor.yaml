@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "monthly_v1_market_activity",
+  "version": "monthly_v1",
+  "status": "candidate",
+  "instrument": "corn",
+  "frequency": "monthly",
+  "group": "market",
+  "source": {
+    "dataset": "corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv",
+    "source_version": "corn_monthly_v1",
+    "inputs": [
+      "dce_corn_volume_sum",
+      "dce_corn_open_interest_last"
+    ]
+  },
+  "prediction_contract": {
+    "factor_period": "month_t",
+    "target_period": "month_t_plus_1",
+    "publication_lag_months": 0,
+    "availability_rule": "DCE month-t volume and open interest are available after the month-t close.",
+    "uses_future_target": false
+  },
+  "missing_value_policy": {
+    "preserve_insufficient_history": true,
+    "backward_fill": false,
+    "two_sided_interpolation": false
+  },
+  "outputs": [
+    {
+      "factor_id": "volume_log_change_1m",
+      "expression": "log1p(volume_t) - log1p(volume_t_minus_1)",
+      "minimum_history_months": 2
+    },
+    {
+      "factor_id": "open_interest_log_change_1m",
+      "expression": "log(open_interest_t) - log(open_interest_t_minus_1)",
+      "minimum_history_months": 2
+    }
+  ]
+}
