@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "monthly_v1_term_structure",
+  "version": "monthly_v1",
+  "status": "candidate",
+  "instrument": "corn",
+  "frequency": "monthly",
+  "group": "term_structure",
+  "source": {
+    "dataset": "corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv",
+    "source_version": "corn_monthly_v1",
+    "inputs": [
+      "corn_100ppi_nearby_futures_price_cny_t_last",
+      "corn_100ppi_main_futures_price_cny_t_last"
+    ]
+  },
+  "prediction_contract": {
+    "factor_period": "month_t",
+    "target_period": "month_t_plus_1",
+    "publication_lag_months": 1,
+    "availability_rule": "Use month t-1 because 100PPI publication timestamps are undocumented.",
+    "uses_future_target": false
+  },
+  "missing_value_policy": {
+    "preserve_insufficient_history": true,
+    "backward_fill": false,
+    "two_sided_interpolation": false
+  },
+  "outputs": [
+    {
+      "factor_id": "nearby_main_spread_ratio_lag1",
+      "expression": "nearby_t_minus_1 / main_t_minus_1 - 1",
+      "minimum_history_months": 2
+    },
+    {
+      "factor_id": "nearby_main_spread_change_1m_lag1",
+      "expression": "spread_ratio_t_minus_1 - spread_ratio_t_minus_2",
+      "minimum_history_months": 3
+    }
+  ]
+}
