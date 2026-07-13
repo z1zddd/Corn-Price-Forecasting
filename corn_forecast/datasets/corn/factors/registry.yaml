@@ -91,3 +91,91 @@ factors:
     outputs: [seasonal_sin, seasonal_cos]
     notes:
       - Calendar encodings are grouped together because they are two outputs of one seasonal transform.
+
+  monthly_v1_price_trend:
+    path: library/monthly_v1/price_trend
+    group: price
+    default_enabled: false
+    frequencies: [monthly]
+    outputs: [price_momentum_1m, price_momentum_3m, price_ma_gap_6m]
+
+  monthly_v1_risk_volatility:
+    path: library/monthly_v1/risk_volatility
+    group: risk
+    default_enabled: false
+    frequencies: [monthly]
+    outputs: [price_range_1m, price_volatility_3m, volatility_ratio_3m_12m]
+
+  monthly_v1_market_activity:
+    path: library/monthly_v1/market_activity
+    group: market
+    default_enabled: false
+    frequencies: [monthly]
+    outputs: [volume_log_change_1m, open_interest_log_change_1m]
+
+  monthly_v1_basis_tightness:
+    path: library/monthly_v1/basis_tightness
+    group: basis
+    default_enabled: false
+    frequencies: [monthly]
+    outputs: [basis_rate_level_lag1, basis_rate_zscore_12m_lag1]
+
+  monthly_v1_term_structure:
+    path: library/monthly_v1/term_structure
+    group: term_structure
+    default_enabled: false
+    frequencies: [monthly]
+    outputs: [nearby_main_spread_ratio_lag1, nearby_main_spread_change_1m_lag1]
+
+  monthly_v1_processing_spread_proxy:
+    path: library/monthly_v1/processing_spread_proxy
+    group: processing
+    default_enabled: false
+    frequencies: [monthly]
+    outputs: [starch_corn_spread_ratio]
+
+  monthly_v1_cross_market_support:
+    path: library/monthly_v1/cross_market_support
+    group: external
+    default_enabled: false
+    frequencies: [monthly]
+    outputs: [cbot_corn_momentum_1m, domestic_minus_cbot_momentum_1m]
+
+  monthly_v1_realized_weather_anomaly:
+    path: library/monthly_v1/realized_weather_anomaly
+    group: weather
+    default_enabled: false
+    frequencies: [monthly]
+    outputs: [precip_anomaly_same_month, temperature_anomaly_same_month, hot_dry_weather_stress]
+
+  monthly_v1_harvest_season_proxy:
+    path: library/monthly_v1/harvest_season_proxy
+    group: harvest
+    default_enabled: false
+    frequencies: [monthly]
+    outputs: [harvest_season_share]
+
+  monthly_v1_seasonal:
+    path: library/monthly_v1/seasonal
+    group: calendar
+    default_enabled: false
+    frequencies: [monthly]
+    outputs: [seasonal_sin, seasonal_cos]
+
+factor_sets:
+  monthly_v1:
+    status: candidate
+    source: ../processed/corn_monthly_core_v1.csv
+    frequency: monthly
+    prediction_contract: month_t_to_month_t_plus_1
+    library_root: library/monthly_v1
+    matrix: matrix/corn_factors_monthly_v1.csv
+    manifest: monthly_v1_manifest.json
+    data_gaps: monthly_v1_data_gaps.yaml
+    candidate_factor_count: 21
+    strict_backtest_eligible: true
+    default_enabled: false
+    notes:
+      - Existing legacy factor materials remain unchanged for comparison.
+      - Weekly and yearly factor redesign is deferred.
+      - Supply pressure is excluded until observed supply data is added.
