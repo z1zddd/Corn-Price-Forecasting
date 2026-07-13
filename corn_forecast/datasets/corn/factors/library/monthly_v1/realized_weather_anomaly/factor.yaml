@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "monthly_v1_realized_weather_anomaly",
+  "version": "monthly_v1",
+  "status": "candidate",
+  "instrument": "corn",
+  "frequency": "monthly",
+  "group": "weather",
+  "source": {
+    "dataset": "corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv",
+    "source_version": "corn_monthly_v1",
+    "inputs": [
+      "ne_avg_precip_mm_mean",
+      "ne_avg_t2m_c_mean"
+    ]
+  },
+  "prediction_contract": {
+    "factor_period": "month_t",
+    "target_period": "month_t_plus_1",
+    "publication_lag_months": 0,
+    "availability_rule": "Realized month-t weather is used only after month t ends.",
+    "uses_future_target": false
+  },
+  "missing_value_policy": {
+    "preserve_insufficient_history": true,
+    "backward_fill": false,
+    "two_sided_interpolation": false
+  },
+  "outputs": [
+    {
+      "factor_id": "precip_anomaly_same_month",
+      "expression": "zscore(precip_t, prior_years_for_same_calendar_month)",
+      "minimum_history_months": 37
+    },
+    {
+      "factor_id": "temperature_anomaly_same_month",
+      "expression": "zscore(temperature_t, prior_years_for_same_calendar_month)",
+      "minimum_history_months": 37
+    },
+    {
+      "factor_id": "hot_dry_weather_stress",
+      "expression": "max(temperature_anomaly, 0) * max(-precip_anomaly, 0)",
+      "minimum_history_months": 37
+    }
+  ],
+  "notes": [
+    "Each baseline uses only prior observations from the same calendar month; full-sample climatology is forbidden."
+  ]
+}
