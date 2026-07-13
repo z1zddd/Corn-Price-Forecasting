@@ -14,8 +14,13 @@ factors/
     <factor_id>/
       factor.yaml
       values.csv
+    monthly_v1/
+      <factor_family>/
+        factor.yaml
+        values.csv
   matrix/
     corn_factors_monthly.csv
+    corn_factors_monthly_v1.csv
     corn_factors_weekly.csv
     corn_factors_yearly.csv
 ```
@@ -58,3 +63,20 @@ training or evaluation convenience, but they do not belong in single-factor
 
 Feature selection, target generation, scaling, and windowing remain outside this
 material layer.
+
+## Monthly v1 Candidate Set
+
+`monthly_v1` is the leakage-aware monthly redesign built from
+`../processed/corn_monthly_core_v1.csv`. It adds 10 factor families with 21
+candidate outputs under `library/monthly_v1/` and a target-free wide matrix at
+`matrix/corn_factors_monthly_v1.csv`.
+
+The set uses month-t factors to predict month t+1. Spot, basis, and 100PPI
+inputs are lagged by one month until publication timestamps are available.
+Weather anomalies use only prior years from the same calendar month. Missing
+rolling history is preserved, and incomplete months are not strict-backtest
+eligible.
+
+See `docs/corn-monthly-factors-v1.md` for formulas and usage rules, and
+`monthly_v1_data_gaps.yaml` for the data acquisition backlog. The old factor
+library and all weekly/yearly files remain unchanged.
