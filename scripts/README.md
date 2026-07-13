@@ -16,6 +16,16 @@ python scripts/build_corn_monthly_dataset.py
 
 脚本会校验月份唯一性、时间顺序、不完整月份和目标列边界，但不会修改模型配置。详细规则见 `docs/corn-monthly-v1.md`。
 
+## 月度因子生成 v1
+
+`build_corn_monthly_factors.py` 从 `corn_monthly_core_v1.csv` 生成 10 个因子族、21 个候选月度因子，并输出无目标列的月度因子矩阵、长表因子库和可复现清单。
+
+```bash
+python scripts/build_corn_monthly_factors.py
+```
+
+该脚本只写入 `factors/library/monthly_v1/`、`factors/matrix/corn_factors_monthly_v1.csv` 和 `factors/monthly_v1_manifest.json`，不会修改旧月度矩阵、周度矩阵、年度矩阵或模型配置。详细规则见 `docs/corn-monthly-factors-v1.md`。
+
 这里存放研究和维护脚本。脚本可以调用 `corn_forecast` 主包，但不应该承载核心业务逻辑。
 
 - `run_best_aggregate_from_predictions.py`: 从已有滚动预测结果复算聚合策略。
