@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "monthly_v1_basis_tightness",
+  "version": "monthly_v1",
+  "status": "candidate",
+  "instrument": "corn",
+  "frequency": "monthly",
+  "group": "basis",
+  "source": {
+    "dataset": "corn_forecast/datasets/corn/processed/corn_monthly_core_v1.csv",
+    "source_version": "corn_monthly_v1",
+    "inputs": [
+      "corn_basis_rate_last"
+    ]
+  },
+  "prediction_contract": {
+    "factor_period": "month_t",
+    "target_period": "month_t_plus_1",
+    "publication_lag_months": 1,
+    "availability_rule": "Use month t-1 because the tracked spot/basis publication timestamp is undocumented.",
+    "uses_future_target": false
+  },
+  "missing_value_policy": {
+    "preserve_insufficient_history": true,
+    "backward_fill": false,
+    "two_sided_interpolation": false
+  },
+  "outputs": [
+    {
+      "factor_id": "basis_rate_level_lag1",
+      "expression": "basis_rate_t_minus_1",
+      "minimum_history_months": 2
+    },
+    {
+      "factor_id": "basis_rate_zscore_12m_lag1",
+      "expression": "zscore(basis_rate_t_minus_1, trailing_12_months)",
+      "minimum_history_months": 13
+    }
+  ]
+}
