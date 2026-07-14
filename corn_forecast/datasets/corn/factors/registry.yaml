@@ -225,7 +225,60 @@ factors:
     frequencies: [daily]
     outputs: [day_of_year_sin, day_of_year_cos, day_of_week_sin, day_of_week_cos]
 
+  daily_market_v1_spot_price:
+    path: library/daily_market_v1/factor_set.yaml
+    group: spot
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [corn_spot_momentum_5d, corn_spot_momentum_20d, corn_spot_dce_basis, corn_regional_dispersion]
+
+  daily_market_v1_quote_quality:
+    path: library/daily_market_v1/factor_set.yaml
+    group: quality
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [corn_quote_count_log, corn_source_count_log, corn_confidence_mean]
+
+  daily_market_v1_processing_spread:
+    path: library/daily_market_v1/factor_set.yaml
+    group: processing
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [starch_corn_spread_ratio, starch_corn_spread_change_5d]
+
+  daily_market_v1_byproduct_pressure:
+    path: library/daily_market_v1/factor_set.yaml
+    group: processing
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [byproduct_momentum_5d, byproduct_momentum_20d]
+
+  daily_market_v1_processing_chain:
+    path: library/daily_market_v1/factor_set.yaml
+    group: demand
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [processing_chain_momentum_20d]
+
 factor_sets:
+  daily_market_v1:
+    status: shadow_candidate
+    source: external_raw_quotes_and_normalized_prices
+    source_files_committed: false
+    frequency: daily_dce_trading_rows
+    prediction_contract: release_available_by_dce_cutoff_to_next_actual_dce_row
+    library_root: library/daily_market_v1
+    matrix: matrix/corn_market_daily_factors_v1.csv
+    manifest: daily_market_v1_manifest.json
+    data_gaps: daily_market_v1_data_gaps.yaml
+    candidate_factor_count: 12
+    strict_backtest_eligible: false
+    default_enabled: false
+    notes:
+      - Source rows are stored externally because authorization and record-level provenance are unresolved.
+      - Historical source vintages are not point-in-time verified.
+      - Use as a shadow residual overlay beside the long-history daily_v1 base model.
+
   daily_v1:
     status: candidate
     source: ../raw/玉米价格原始数据.csv
