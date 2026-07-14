@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "id": "corn_daily_v1",
+  "version": "daily_v1",
+  "status": "candidate",
+  "instrument": "corn",
+  "frequency": "daily_dce_trading_rows",
+  "source": "corn_forecast/datasets/corn/raw/玉米价格原始数据.csv",
+  "prediction_contract": {
+    "factor_row": "DCE trading day t",
+    "target_row": "next actual DCE trading day after t",
+    "cutoff": "after day t ends",
+    "uses_future_target": false
+  },
+  "missing_value_policy": {
+    "preserve_rolling_warmup": true,
+    "backward_fill": false,
+    "two_sided_interpolation": false,
+    "training_imputation": "fit inside each training fold only"
+  },
+  "families": {
+    "price_trend": {
+      "group": "price",
+      "availability": "DCE day-t close is available after the day-t close.",
+      "inputs": [
+        "dce_corn_close"
+      ],
+      "outputs": {
+        "price_momentum_1d": "close_t / close_t_minus_1 - 1",
+        "price_momentum_5d": "close_t / close_t_minus_5 - 1",
+        "price_momentum_20d": "close_t / close_t_minus_20 - 1",
+        "price_ma_gap_5d": "close_t / mean(close_t_minus_4_to_t) - 1",
+        "price_ma_gap_20d": "close_t / mean(close_t_minus_19_to_t) - 1",
+        "price_ma_gap_60d": "close_t / mean(close_t_minus_59_to_t) - 1"
+      }
+    },
+    "risk_volatility": {
+      "group": "risk",
+      "availability": "DCE day-t OHLC is available after the day-t close.",
+      "inputs": [
+        "dce_corn_high",
+        "dce_corn_low",
+        "dce_corn_close"
+      ],
+      "outputs": {
+        "price_range_1d": "(high_t - low_t) / close_t",
+        "price_volatility_5d": "std(daily_close_return_t_minus_4_to_t)",
+        "price_volatility_20d": "std(daily_close_return_t_minus_19_to_t)",
+        "volatility_ratio_5d_20d": "volatility_5d / volatility_20d"
+      }
+    },
+    "market_activity": {
+      "group": "market",
+      "availability": "DCE day-t volume and open interest are available after the close.",
+      "inputs": [
+        "dce_corn_volume",
+        "dce_corn_open_interest"
+      ],
+      "outputs": {
+        "volume_log_change_1d": "log1p(volume_t) - log1p(volume_t_minus_1)",
+        "open_interest_log_change_1d": "log(open_interest_t) - log(open_interest_t_minus_1)"
+      }
+    },
+    "basis_tightness": {
+      "group": "basis",
+      "availability": "Publication time is undocumented; use the prior DCE row.",
+      "publication_lag_dce_rows": 1,
+      "inputs": [
+        "corn_basis_rate"
+      ],
+      "outputs": {
+        "basis_rate_level_lag1d": "basis_rate_t_minus_1",
+        "basis_rate_change_1d_lag1d": "basis_rate_t_minus_1 - basis_rate_t_minus_2",
+        "basis_rate_zscore_20d_lag1d": "zscore(basis_rate_t_minus_1, trailing_20_rows)"
+      }
+    },
+    "term_structure": {
+      "group": "term_structure",
+      "availability": "100PPI publication time is undocumented; use the prior DCE row.",
+      "publication_lag_dce_rows": 1,
+      "inputs": [
+        "corn_100ppi_nearby_futures_price_cny_t",
+        "corn_100ppi_main_futures_price_cny_t"
+      ],
+      "outputs": {
+        "nearby_main_spread_ratio_lag1d": "nearby_t_minus_1 / main_t_minus_1 - 1",
+        "nearby_main_spread_change_1d_lag1d": "spread_ratio_t_minus_1 - spread_ratio_t_minus_2"
+      }
+    },
+    "processing_spread_proxy": {
+      "group": "processing",
+      "availability": "Both DCE prices are available after the day-t close.",
+      "inputs": [
+        "cs_c_spread_close",
+        "dce_corn_close"
+      ],
+      "outputs": {
+        "starch_corn_spread_ratio": "starch_minus_corn_spread_t / corn_close_t",
+        "starch_corn_spread_change_5d": "spread_ratio_t - spread_ratio_t_minus_5"
+      },
+      "notes": [
+        "This is a futures spread proxy, not a measured processing margin."
+      ]
+    },
+    "cross_market_support": {
+      "group": "external",
+      "availability": "The US close follows the DCE close; use the prior DCE row.",
+      "publication_lag_dce_rows": 1,
+      "inputs": [
+        "cbot_corn_close",
+        "cbot_wheat_corn_ratio",
+        "dce_corn_close"
+      ],
+      "outputs": {
+        "cbot_corn_momentum_1d_lag1d": "cbot_close_t_minus_1 / cbot_close_t_minus_2 - 1",
+        "cbot_corn_momentum_5d_lag1d": "cbot_close_t_minus_1 / cbot_close_t_minus_6 - 1",
+        "domestic_minus_cbot_momentum_1d_lag1d": "dce_return_t - lagged_cbot_return_t",
+        "cbot_wheat_corn_ratio_change_1d_lag1d": "ratio_t_minus_1 / ratio_t_minus_2 - 1"
+      }
+    },
+    "realized_weather": {
+      "group": "weather",
+      "availability": "Realized day-t weather is used only after day t ends.",
+      "inputs": [
+        "ne_avg_precip_mm",
+        "ne_avg_t2m_c"
+      ],
+      "outputs": {
+        "precipitation_sum_5d": "sum(precipitation_t_minus_4_to_t)",
+        "precipitation_week_vs_month": "mean(precipitation_5d) / mean(precipitation_20d) - 1",
+        "temperature_deviation_20d": "temperature_t - mean(temperature_t_minus_19_to_t)"
+      }
+    },
+    "calendar": {
+      "group": "calendar",
+      "availability": "Calendar fields are known in advance.",
+      "inputs": [
+        "date"
+      ],
+      "outputs": {
+        "day_of_year_sin": "sin(2*pi*day_of_year/365.25)",
+        "day_of_year_cos": "cos(2*pi*day_of_year/365.25)",
+        "day_of_week_sin": "sin(2*pi*day_of_week/5)",
+        "day_of_week_cos": "cos(2*pi*day_of_week/5)"
+      }
+    }
+  }
+}
