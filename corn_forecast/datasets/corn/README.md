@@ -33,8 +33,12 @@ factors/
     <factor_id>/
       factor.yaml
       values.csv
+    daily_v1/
+      factor_set.yaml
   matrix/
+    corn_factors_daily_v1.csv
     corn_factors_monthly.csv
+    corn_factors_monthly_v1.csv
     corn_factors_weekly.csv
     corn_factors_yearly.csv
 
