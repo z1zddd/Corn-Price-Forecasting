@@ -1,0 +1,60 @@
+version: daily_v1
+scope: daily_corn_factors
+status: active
+
+timing_policy:
+  prediction_contract: Use factors available after DCE trading row t ends to predict the next actual DCE trading row.
+  temporary_controls:
+    spot_basis_100ppi: lag_one_dce_row
+    cbot: lag_one_dce_row
+  reason: Publication timestamps and cross-time-zone close timestamps are not stored in the raw table.
+
+observed_source_gaps:
+  - fields: [corn_import_volume_ton_ffill, reserve_corn_release_volume_ton]
+    missing_rows: 2426
+    action: excluded
+    reason: Entire columns are missing; no factor can be defined from them.
+  - fields: [cbot_corn_close]
+    missing_rows: 58
+    action: preserve_missing
+    affected_family: cross_market_support
+  - fields: [cbot_wheat_close, cbot_wheat_corn_ratio]
+    missing_rows: 59_to_60
+    action: preserve_missing
+    affected_family: cross_market_support
+  - fields: [corn_basis_rate, corn_100ppi_main_futures_price_cny_t, corn_100ppi_nearby_futures_price_cny_t]
+    missing_rows: 4_each
+    action: preserve_missing
+    affected_families: [basis_tightness, term_structure]
+
+acquisition_backlog:
+  - id: timestamped_releases_and_vintages
+    priority: critical
+    missing_data: [source_time, release_time, ingestion_time, revision_time, vintage_id]
+    benefit: Replace conservative row lags with exact point-in-time joins.
+  - id: inventory_receipts_and_imports
+    priority: critical
+    missing_data: [port_inventory, commercial_inventory, warehouse_receipts, daily_or_weekly_import_arrivals]
+    intended_family: supply_pressure
+  - id: crop_and_production_expectations
+    priority: critical
+    missing_data: [planting_progress, crop_condition, yield_forecast, production_forecast, harvest_progress]
+    intended_family: production_expectations
+  - id: processing_and_feed_demand
+    priority: high
+    missing_data: [starch_operating_rate, ethanol_operating_rate, processing_margin, feed_output, hog_and_poultry_inventory]
+    intended_families: [processing_demand, feed_demand]
+  - id: contract_level_curve
+    priority: high
+    missing_data: [contract_code, delivery_month, dominant_contract_map, roll_date, roll_rule]
+    intended_family: term_structure
+  - id: forecast_weather
+    priority: medium
+    missing_data: [point_in_time_forecasts, soil_moisture, drought_index, growing_degree_days, crop_stage_weights]
+    intended_family: expected_weather_risk
+  - id: timestamped_policy_and_news
+    priority: medium
+    missing_data: [original_text, source, publication_timestamp, revision_timestamp]
+    intended_family: policy_and_news
+
+training_rule: Do not globally fill these gaps. Fit imputation and feature selection inside each training fold.
