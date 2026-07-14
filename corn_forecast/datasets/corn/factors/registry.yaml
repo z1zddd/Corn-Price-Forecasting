@@ -162,7 +162,87 @@ factors:
     frequencies: [monthly]
     outputs: [seasonal_sin, seasonal_cos]
 
+  daily_v1_price_trend:
+    path: library/daily_v1/factor_set.yaml
+    group: price
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [price_momentum_1d, price_momentum_5d, price_momentum_20d, price_ma_gap_5d, price_ma_gap_20d, price_ma_gap_60d]
+
+  daily_v1_risk_volatility:
+    path: library/daily_v1/factor_set.yaml
+    group: risk
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [price_range_1d, price_volatility_5d, price_volatility_20d, volatility_ratio_5d_20d]
+
+  daily_v1_market_activity:
+    path: library/daily_v1/factor_set.yaml
+    group: market
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [volume_log_change_1d, open_interest_log_change_1d]
+
+  daily_v1_basis_tightness:
+    path: library/daily_v1/factor_set.yaml
+    group: basis
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [basis_rate_level_lag1d, basis_rate_change_1d_lag1d, basis_rate_zscore_20d_lag1d]
+
+  daily_v1_term_structure:
+    path: library/daily_v1/factor_set.yaml
+    group: term_structure
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [nearby_main_spread_ratio_lag1d, nearby_main_spread_change_1d_lag1d]
+
+  daily_v1_processing_spread_proxy:
+    path: library/daily_v1/factor_set.yaml
+    group: processing
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [starch_corn_spread_ratio, starch_corn_spread_change_5d]
+
+  daily_v1_cross_market_support:
+    path: library/daily_v1/factor_set.yaml
+    group: external
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [cbot_corn_momentum_1d_lag1d, cbot_corn_momentum_5d_lag1d, domestic_minus_cbot_momentum_1d_lag1d, cbot_wheat_corn_ratio_change_1d_lag1d]
+
+  daily_v1_realized_weather:
+    path: library/daily_v1/factor_set.yaml
+    group: weather
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [precipitation_sum_5d, precipitation_week_vs_month, temperature_deviation_20d]
+
+  daily_v1_calendar:
+    path: library/daily_v1/factor_set.yaml
+    group: calendar
+    default_enabled: false
+    frequencies: [daily]
+    outputs: [day_of_year_sin, day_of_year_cos, day_of_week_sin, day_of_week_cos]
+
 factor_sets:
+  daily_v1:
+    status: candidate
+    source: ../raw/玉米价格原始数据.csv
+    frequency: daily_dce_trading_rows
+    prediction_contract: dce_row_t_to_next_actual_dce_row
+    library_root: library/daily_v1
+    matrix: matrix/corn_factors_daily_v1.csv
+    manifest: daily_v1_manifest.json
+    data_gaps: daily_v1_data_gaps.yaml
+    candidate_factor_count: 30
+    strict_backtest_eligible: true
+    default_enabled: false
+    notes:
+      - Basis, 100PPI, and CBOT inputs are lagged by one DCE row.
+      - Rolling warm-up and raw source gaps remain missing.
+      - Existing monthly, weekly, yearly, and model configuration files remain unchanged.
+
   monthly_v1:
     status: candidate
     source: ../processed/corn_monthly_core_v1.csv
