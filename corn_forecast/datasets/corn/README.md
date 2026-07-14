@@ -35,8 +35,11 @@ factors/
       values.csv
     daily_v1/
       factor_set.yaml
+    daily_market_v1/
+      factor_set.yaml
   matrix/
     corn_factors_daily_v1.csv
+    corn_market_daily_factors_v1.csv
     corn_factors_monthly.csv
     corn_factors_monthly_v1.csv
     corn_factors_weekly.csv
