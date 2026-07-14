@@ -36,6 +36,16 @@ python scripts/build_corn_daily_factors.py
 
 脚本只写入 `factors/library/daily_v1/factor_set.yaml`、`factors/matrix/corn_factors_daily_v1.csv` 和 `factors/daily_v1_manifest.json`。它不会修改原始数据、月度/周度/年度因子或模型配置。详细规则见 `docs/corn-daily-factors-v1.md`。
 
+## 产业链日频因子生成 v1
+
+`build_corn_market_daily_factors.py` 从本地外部 `raw_quotes.csv` 和 `normalized_prices.csv` 生成 12 个短历史产业链因子。源明细应放在被 Git 忽略的 `local_data/corn_market/`，不会复制到公开数据目录。
+
+```bash
+python scripts/build_corn_market_daily_factors.py
+```
+
+脚本验证两份源文件的记录 ID 一致性，按 15:00 截止时间映射到 DCE 交易日，并写入 `factors/library/daily_market_v1/factor_set.yaml`、`factors/matrix/corn_market_daily_factors_v1.csv` 和 `factors/daily_market_v1_manifest.json`。该因子集只用于影子回测和残差增强，详见 `docs/corn-daily-market-factors-v1.md`。
+
 这里存放研究和维护脚本。脚本可以调用 `corn_forecast` 主包，但不应该承载核心业务逻辑。
 
 - `run_best_aggregate_from_predictions.py`: 从已有滚动预测结果复算聚合策略。
