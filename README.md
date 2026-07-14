@@ -64,6 +64,12 @@ commodity-backtest interpret --experiment experiments/manual_run
 
 日频口径使用交易日 `t` 结束后可获得的信息预测下一个实际 DCE 交易日。基差、100PPI 和 CBOT 字段保守滞后 1 个 DCE 行；滚动预热和原始缺口保持为空，不做后向填充。该候选集尚未自动接入模型配置，也未修改现有月度、周度和年度因子。运行 `python scripts/build_corn_daily_factors.py` 可重复生成，详见 [玉米日频因子集 v1 说明](docs/corn-daily-factors-v1.md)。
 
+## 玉米产业链日频因子集 v1
+
+仓库新增 `daily_market_v1` 短历史候选因子集，由外部 `raw_quotes.csv` 和 `normalized_prices.csv` 在本地生成。两份源明细因授权状态和记录级来源信息不提交到公开仓库；仓库只保存可复现脚本、源哈希、12 个聚合因子、定义和数据缺口说明。
+
+宽表位于 `corn_forecast/datasets/corn/factors/matrix/corn_market_daily_factors_v1.csv`，覆盖完整 DCE 日历，但产业链因子只在 2025-07-14 以后出现。历史 vintage 尚未验证，因此它是影子回测和残差增强模型的候选输入，不是严格回测默认因子。运行 `python scripts/build_corn_market_daily_factors.py` 可在本地源文件就位后重建，详见 [玉米产业链日频因子集 v1 说明](docs/corn-daily-market-factors-v1.md)。
+
 ## 项目结构
 
 ```text
@@ -172,6 +178,7 @@ pip install -e .[deep]
 - [玉米月度数据集 v1](docs/corn-monthly-v1.md)
 - [玉米月度因子集 v1](docs/corn-monthly-factors-v1.md)
 - [玉米日频因子集 v1](docs/corn-daily-factors-v1.md)
+- [玉米产业链日频因子集 v1](docs/corn-daily-market-factors-v1.md)
 
 ## 验证
 
