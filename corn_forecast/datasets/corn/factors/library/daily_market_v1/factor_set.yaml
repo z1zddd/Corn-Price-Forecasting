@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "id": "corn_daily_market_v1",
+  "version": "daily_market_v1",
+  "status": "shadow_candidate",
+  "instrument": "corn",
+  "frequency": "daily_dce_trading_rows",
+  "source_files": {
+    "raw_quotes": "external/raw_quotes.csv",
+    "normalized_prices": "external/normalized_prices.csv",
+    "committed_to_repository": false
+  },
+  "prediction_contract": {
+    "release_cutoff": "15:00 Asia/Shanghai",
+    "after_cutoff_rule": "Map to the next DCE trading row.",
+    "non_trading_day_rule": "Map to the next DCE trading row.",
+    "target_row": "next actual DCE trading row",
+    "uses_future_target": false,
+    "point_in_time_vintage_verified": false
+  },
+  "filtering": {
+    "trainable": "yes",
+    "allowed_status": [
+      "normalized",
+      "price_parsed",
+      "accepted"
+    ],
+    "unit": "元/吨",
+    "positive_price_only": true
+  },
+  "missing_value_policy": {
+    "backward_fill": false,
+    "forward_fill": false,
+    "two_sided_interpolation": false,
+    "training_imputation": "fit inside each training fold only"
+  },
+  "families": {
+    "spot_price": {
+      "group": "spot",
+      "inputs": [
+        "corn",
+        "dce_corn_close"
+      ],
+      "outputs": {
+        "corn_spot_momentum_5d": "corn_spot_median_t / corn_spot_median_t_minus_5 - 1",
+        "corn_spot_momentum_20d": "corn_spot_median_t / corn_spot_median_t_minus_20 - 1",
+        "corn_spot_dce_basis": "corn_spot_median_t / dce_corn_close_t - 1",
+        "corn_regional_dispersion": "IQR(corn_quotes_t) / median(corn_quotes_t), minimum_three_quotes"
+      }
+    },
+    "quote_quality": {
+      "group": "quality",
+      "inputs": [
+        "corn_quote_rows",
+        "corn_quote_sources",
+        "confidence"
+      ],
+      "outputs": {
+        "corn_quote_count_log": "log1p(valid_corn_quote_count_t)",
+        "corn_source_count_log": "log1p(unique_corn_source_count_t)",
+        "corn_confidence_mean": "mean(valid_corn_quote_confidence_t)"
+      }
+    },
+    "processing_spread": {
+      "group": "processing",
+      "inputs": [
+        "corn",
+        "corn_starch"
+      ],
+      "outputs": {
+        "starch_corn_spread_ratio": "corn_starch_median_t / corn_spot_median_t - 1",
+        "starch_corn_spread_change_5d": "spread_ratio_t - spread_ratio_t_minus_5"
+      }
+    },
+    "byproduct_pressure": {
+      "group": "processing",
+      "inputs": [
+        "corn_husk",
+        "germ",
+        "protein_powder"
+      ],
+      "outputs": {
+        "byproduct_momentum_5d": "mean(five_row_return_by_product_t), minimum_two_products",
+        "byproduct_momentum_20d": "mean(twenty_row_return_by_product_t), minimum_two_products"
+      }
+    },
+    "processing_chain": {
+      "group": "demand",
+      "inputs": [
+        "corn_glucose",
+        "corn_fructose",
+        "glucose_syrup",
+        "maltodextrin",
+        "maltose_syrup",
+        "crystalline_fructose"
+      ],
+      "outputs": {
+        "processing_chain_momentum_20d": "mean(twenty_row_return_by_product_t), minimum_three_products"
+      }
+    }
+  }
+}
