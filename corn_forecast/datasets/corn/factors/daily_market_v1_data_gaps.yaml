@@ -1,0 +1,59 @@
+version: daily_market_v1
+scope: external_corn_market_chain_quotes
+status: shadow_candidate
+
+source_storage:
+  raw_quotes_committed: false
+  normalized_prices_committed: false
+  expected_local_directory: local_data/corn_market
+  reason: Source authorization is unresolved and the two exports contain record-level URLs and text.
+
+timing_policy:
+  dce_cutoff: "15:00 Asia/Shanghai"
+  before_or_at_cutoff: same_dce_row_when_trading_day
+  after_cutoff: next_dce_row
+  non_trading_day: next_dce_row
+  historical_vintage_verified: false
+  consequence: Use for shadow research only; do not claim strict point-in-time eligibility.
+
+gaps:
+  - id: source_authorization
+    priority: critical
+    status: unresolved
+    observed_counts:
+      unknown: 9785
+      no: 499
+      yes: 1
+    required_next_step: Confirm redistribution and derivative-data rights before publishing source exports or promoting derived factors.
+
+  - id: historical_vintage
+    priority: critical
+    status: missing
+    missing_data: [full_ingestion_timestamp, revision_timestamp, vintage_id]
+    limitation: Historical API observations may have been backfilled after their stated publication dates.
+    required_next_step: Persist immutable daily snapshots during future collection.
+
+  - id: short_history
+    priority: critical
+    status: incomplete
+    source_date_range: 2025-07-14_to_2026-07-09
+    dce_overlap_end: 2026-06-26
+    limitation: Only about 231 DCE rows contain source observations.
+    required_next_step: Backfill or collect at least three years before using these factors in a standalone sequence model.
+
+  - id: product_taxonomy
+    priority: high
+    status: proxy_only
+    limitation: Several wheat and processing products are stored under the broad corn-chain category.
+    current_control: Use explicit product_code lists rather than the broad category label.
+
+  - id: regional_composition
+    priority: high
+    status: changing_coverage
+    limitation: Daily medians can change when the set of reporting regions or sources changes.
+    current_control: Export quote count, source count, confidence, and regional dispersion factors.
+
+training_policy:
+  recommended_use: Residual overlay or short-history feature block beside the long-history daily_v1 base model.
+  forbidden_use: Do not truncate the full 2016-present base training set to the quote-data overlap.
+  preprocessing: Fit imputation, scaling, winsorization, and feature selection inside each training fold.
