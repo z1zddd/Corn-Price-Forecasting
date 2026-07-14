@@ -18,7 +18,10 @@ factors/
       <factor_family>/
         factor.yaml
         values.csv
+    daily_v1/
+      factor_set.yaml
   matrix/
+    corn_factors_daily_v1.csv
     corn_factors_monthly.csv
     corn_factors_monthly_v1.csv
     corn_factors_weekly.csv
@@ -34,6 +37,8 @@ factors/
   - `values.csv`: long-form values with `period_end`, `period_key`,
     `frequency`, `instrument`, `factor_id`, `value`, `coverage`, `asof_date`,
     `quality_flag`, and `source_version`.
+  `daily_v1` uses one centralized `factor_set.yaml` and the canonical wide
+  matrix instead of duplicating all daily values into long-form files.
 - `registry.yaml` is the factor index used to discover available factors,
   groups, frequencies, and outputs.
 - `matrix/` contains model-adjacent wide tables. These files are convenient for
@@ -80,3 +85,16 @@ eligible.
 See `docs/corn-monthly-factors-v1.md` for formulas and usage rules, and
 `monthly_v1_data_gaps.yaml` for the data acquisition backlog. The old factor
 library and all weekly/yearly files remain unchanged.
+
+## Daily v1 Candidate Set
+
+`daily_v1` is generated directly from `../raw/玉米价格原始数据.csv`. It contains
+9 families and 30 target-free candidate factors for 2,426 DCE trading-day rows.
+The wide matrix is `matrix/corn_factors_daily_v1.csv`; the centralized formula
+and timing definition is `library/daily_v1/factor_set.yaml`.
+
+Use factors available after DCE row t ends to predict the next actual DCE row.
+Basis, 100PPI, and CBOT inputs are lagged by one DCE row. Rolling warm-up and
+source gaps remain missing. See `docs/corn-daily-factors-v1.md` and
+`daily_v1_data_gaps.yaml`. Monthly, weekly, yearly, and model configuration
+files remain unchanged.
