@@ -58,6 +58,12 @@ commodity-backtest interpret --experiment experiments/manual_run
 
 现货、基差和 100PPI 字段在补齐发布时间戳前统一滞后 1 个月；天气异常只使用同一历月的过去年份；历史不足保留缺失值。现有旧月度因子、周度因子、年度因子和模型配置均未切换。运行 `python scripts/build_corn_monthly_factors.py` 可重复生成，详见 [玉米月度因子集 v1 说明](docs/corn-monthly-factors-v1.md)。
 
+## 玉米日频因子集 v1
+
+仓库从 `raw/玉米价格原始数据.csv` 直接生成独立的日频候选因子集：9 个因子族、30 个候选因子、2,426 个 DCE 交易日行。无目标宽表位于 `corn_forecast/datasets/corn/factors/matrix/corn_factors_daily_v1.csv`，集中式定义位于 `corn_forecast/datasets/corn/factors/library/daily_v1/factor_set.yaml`。
+
+日频口径使用交易日 `t` 结束后可获得的信息预测下一个实际 DCE 交易日。基差、100PPI 和 CBOT 字段保守滞后 1 个 DCE 行；滚动预热和原始缺口保持为空，不做后向填充。该候选集尚未自动接入模型配置，也未修改现有月度、周度和年度因子。运行 `python scripts/build_corn_daily_factors.py` 可重复生成，详见 [玉米日频因子集 v1 说明](docs/corn-daily-factors-v1.md)。
+
 ## 项目结构
 
 ```text
@@ -165,6 +171,7 @@ pip install -e .[deep]
 - [Agent 工作流](docs/agent-workflow.md)
 - [玉米月度数据集 v1](docs/corn-monthly-v1.md)
 - [玉米月度因子集 v1](docs/corn-monthly-factors-v1.md)
+- [玉米日频因子集 v1](docs/corn-daily-factors-v1.md)
 
 ## 验证
 
