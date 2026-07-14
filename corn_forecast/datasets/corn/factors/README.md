@@ -20,8 +20,11 @@ factors/
         values.csv
     daily_v1/
       factor_set.yaml
+    daily_market_v1/
+      factor_set.yaml
   matrix/
     corn_factors_daily_v1.csv
+    corn_market_daily_factors_v1.csv
     corn_factors_monthly.csv
     corn_factors_monthly_v1.csv
     corn_factors_weekly.csv
@@ -98,3 +101,17 @@ Basis, 100PPI, and CBOT inputs are lagged by one DCE row. Rolling warm-up and
 source gaps remain missing. See `docs/corn-daily-factors-v1.md` and
 `daily_v1_data_gaps.yaml`. Monthly, weekly, yearly, and model configuration
 files remain unchanged.
+
+## Daily Market v1 Shadow Candidate Set
+
+`daily_market_v1` is generated from external `raw_quotes.csv` and
+`normalized_prices.csv` files that remain under ignored local storage. It adds
+12 short-history spot, quote-quality, processing-spread, byproduct, and
+processing-chain factors at `matrix/corn_market_daily_factors_v1.csv`.
+
+The matrix preserves the full DCE calendar but observations begin in July
+2025. Historical source vintages are not verified, so strict-backtest flags
+remain false. Use this set as a residual overlay or shadow feature block beside
+the long-history `daily_v1` base model. See
+`docs/corn-daily-market-factors-v1.md` and
+`daily_market_v1_data_gaps.yaml`.
