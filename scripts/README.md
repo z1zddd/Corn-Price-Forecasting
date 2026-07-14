@@ -26,6 +26,16 @@ python scripts/build_corn_monthly_factors.py
 
 该脚本只写入 `factors/library/monthly_v1/`、`factors/matrix/corn_factors_monthly_v1.csv` 和 `factors/monthly_v1_manifest.json`，不会修改旧月度矩阵、周度矩阵、年度矩阵或模型配置。详细规则见 `docs/corn-monthly-factors-v1.md`。
 
+## 日频因子生成 v1
+
+`build_corn_daily_factors.py` 直接从 `raw/玉米价格原始数据.csv` 生成 9 个因子族、30 个候选日频因子。基差、100PPI 和 CBOT 字段滞后 1 个 DCE 行，滚动预热与原始缺口保持为空。
+
+```bash
+python scripts/build_corn_daily_factors.py
+```
+
+脚本只写入 `factors/library/daily_v1/factor_set.yaml`、`factors/matrix/corn_factors_daily_v1.csv` 和 `factors/daily_v1_manifest.json`。它不会修改原始数据、月度/周度/年度因子或模型配置。详细规则见 `docs/corn-daily-factors-v1.md`。
+
 这里存放研究和维护脚本。脚本可以调用 `corn_forecast` 主包，但不应该承载核心业务逻辑。
 
 - `run_best_aggregate_from_predictions.py`: 从已有滚动预测结果复算聚合策略。
