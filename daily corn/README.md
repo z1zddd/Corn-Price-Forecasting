@@ -9,6 +9,7 @@
 - `models/`：基线、机器学习、深度学习和组合模型。
 - `scripts/`：数据处理、实验运行和结果评价脚本。
 - `results/`：预测、指标和本次实际配置。
+- `report/`：每次实验的 Markdown 实验报告。
 - `checkpoints/`：模型权重和训练状态。
 - `tests/`：自动检查脚本。
 - `docs/`：回测框架文档。
@@ -17,6 +18,7 @@
 
 ```text
 results/<数据名>/<模型名>/<YYYY-MM-DD-HH-MM-SS>/
+report/<数据名>/<模型名>/<YYYY-MM-DD-HH-MM-SS>/report.md
 checkpoints/<数据名>/<模型名>/<YYYY-MM-DD-HH-MM-SS>/
 ```
 
