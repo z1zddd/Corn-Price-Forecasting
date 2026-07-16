@@ -1,0 +1,57 @@
+data:
+  csv_path: datasets/processed/corn_market_daily_factors_v1.csv
+  date_col: date
+  target_col: dce_corn_close
+  expected_sha256: A95A68E27D4892A6DD8DC95B89377AD90F6F7FF784E0EA7310F5301CDE07DE79
+
+target:
+  type: future_price
+  horizons: [5, 10, 15, 20]
+
+lookback:
+  candidates: [5, 10, 15, 20]
+
+feature_set:
+  name: market_factors_lag1
+  external_lag: 1
+  max_training_missing_rate: 0.5
+
+split:
+  strategies:
+    chronological_712:
+      ratios: [0.7, 0.1, 0.2]
+      refit_during_test: false
+  purge: auto_horizon
+  embargo: auto_horizon
+  shuffle: false
+
+tuning:
+  method: grid_search
+  metric: RMSE
+  seed: 42
+  grid:
+    n_estimators: [200]
+    max_depth: [8, null]
+    min_samples_leaf: [1, 5]
+    max_features: [sqrt, 0.5]
+
+model:
+  name: random_forest
+  class_name: RandomForestPriceRegressor
+  fixed_params:
+    criterion: squared_error
+    min_samples_split: 2
+    bootstrap: true
+    n_jobs: -1
+
+formal:
+  seeds: [42]
+
+evaluation:
+  transaction_cost_bps: [0, 2, 5, 10]
+  overlapping_economics: non_overlapping_sleeves
+
+run:
+  runner: zzm
+  dataset_name: corn_market_daily_factors_v1
+  model_name: random_forest
