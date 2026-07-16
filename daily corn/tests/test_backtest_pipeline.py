@@ -13,6 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from models.machine_learning.RandomForest import RandomForestPriceRegressor
+from models.deep_learning.LSTM import LSTMPriceRegressor
 from scripts.data_processing.data_pipeline import (
     FoldPreprocessor,
     assert_no_temporal_leakage,
@@ -28,12 +29,14 @@ from scripts.evaluation.evaluate import (
 from scripts.experiments.run_experiment import (
     ExperimentContractError,
     build_seed_stability,
+    build_model,
     load_config,
     make_parameter_grid,
     raise_formal_failure,
     resolve_strategy_plan,
     run_expanding_setting,
     run_fixed_setting,
+    tune_parameters,
     validate_formal_coverage,
 )
 
@@ -84,6 +87,38 @@ def test_preprocessor_uses_training_missingness_only() -> None:
     assert np.isfinite(transformed_test).all()
 
 
+def test_sequence_preprocessor_keeps_complete_lag_groups_without_indicators() -> None:
+    train = pd.DataFrame(
+        {
+            "keep__lag1": [1.0, np.nan, 3.0, 4.0],
+            "drop__lag1": [np.nan, np.nan, np.nan, 1.0],
+            "keep__lag0": [2.0, 3.0, np.nan, 5.0],
+            "drop__lag0": [np.nan, np.nan, 2.0, np.nan],
+        }
+    )
+    evaluation = pd.DataFrame(
+        {
+            "keep__lag1": [np.nan],
+            "drop__lag1": [9.0],
+            "keep__lag0": [6.0],
+            "drop__lag0": [9.0],
+        }
+    )
+    preprocessor = FoldPreprocessor(
+        max_missing_rate=0.5,
+        add_missing_indicators=False,
+        preserve_lag_groups=True,
+    )
+
+    transformed_train = preprocessor.fit_transform(train)
+    transformed_evaluation = preprocessor.transform(evaluation)
+
+    assert preprocessor.selected_columns == ["keep__lag1", "keep__lag0"]
+    assert transformed_train.shape == (4, 2)
+    assert transformed_evaluation.shape == (1, 2)
+    assert np.isfinite(transformed_evaluation).all()
+
+
 @pytest.mark.parametrize("ratios", [(0.8, 0.1, 0.1), (0.7, 0.1, 0.2)])
 def test_fixed_split_purges_unknown_targets(ratios: tuple[float, float, float]) -> None:
     samples = build_supervised_samples(make_frame(), horizon=5, lookback=5)
@@ -130,6 +165,90 @@ def test_random_forest_outputs_prices_and_round_trips(tmp_path: Path) -> None:
     np.testing.assert_allclose(predictions, loaded.predict(X[:5]))
 
 
+def test_lstm_outputs_prices_and_round_trips(tmp_path: Path) -> None:
+    rng = np.random.default_rng(42)
+    X = rng.normal(size=(48, 20)).astype(np.float32)
+    y = 2000.0 + 5.0 * X[:, -1] + np.arange(48, dtype=float) * 0.1
+    model = LSTMPriceRegressor(
+        lookback=5,
+        hidden_size=8,
+        num_layers=1,
+        learning_rate=0.001,
+        batch_size=8,
+        max_epochs=3,
+        patience=2,
+        weight_decay=0.0,
+        gradient_clip=1.0,
+        random_state=42,
+        device="cpu",
+    )
+    model.fit(X[:40], y[:40], validation_data=(X[40:], y[40:]))
+    predictions = model.predict(X[40:])
+    checkpoint = tmp_path / "lstm.pt"
+    model.save(checkpoint)
+    loaded = LSTMPriceRegressor.load(checkpoint)
+
+    assert predictions.shape == (8,)
+    assert np.isfinite(predictions).all()
+    assert model.best_epoch_ >= 1
+    np.testing.assert_allclose(predictions, loaded.predict(X[40:]), rtol=1e-5)
+
+
+def test_lstm_refit_without_validation_keeps_selected_final_epoch() -> None:
+    rng = np.random.default_rng(7)
+    X = rng.normal(size=(48, 20)).astype(np.float32)
+    y = 2000.0 + rng.normal(size=48) * 20.0
+    model = LSTMPriceRegressor(
+        lookback=5,
+        hidden_size=8,
+        num_layers=1,
+        learning_rate=1.0,
+        batch_size=8,
+        max_epochs=5,
+        patience=2,
+        weight_decay=0.0,
+        gradient_clip=1.0,
+        random_state=42,
+        device="cpu",
+    )
+
+    model.fit(X, y)
+
+    assert model.best_epoch_ == 5
+
+
+def test_model_factory_builds_lstm_from_config() -> None:
+    config = load_config(PROJECT_ROOT / "configs" / "lstm.yaml")
+    model = build_model(
+        config,
+        {"hidden_size": 32, "learning_rate": 0.001},
+        seed=42,
+        lookback=5,
+    )
+
+    assert isinstance(model, LSTMPriceRegressor)
+    assert model.params["lookback"] == 5
+
+
+def test_lstm_tuning_returns_validation_selected_epoch() -> None:
+    config = load_config(PROJECT_ROOT / "configs" / "lstm.yaml")
+    config["model"]["fixed_params"]["hidden_size"] = 8
+    config["model"]["fixed_params"]["max_epochs"] = 2
+    config["model"]["fixed_params"]["patience"] = 2
+    config["tuning"]["grid"] = {
+        "hidden_size": [8],
+        "learning_rate": [0.001],
+    }
+    samples = build_supervised_samples(make_frame(100), horizon=5, lookback=5)
+    split = make_fixed_split(samples, ratios=(0.7, 0.1, 0.2), embargo=5)
+
+    best, rows = tune_parameters(samples, split, config, "chronological_712")
+
+    assert len(rows) == 1
+    assert 1 <= best["max_epochs"] <= 2
+    assert np.isfinite(rows[0]["validation_rmse"])
+
+
 def test_evaluation_derives_trend_and_non_overlapping_economics() -> None:
     predictions = pd.DataFrame(
         {
@@ -165,6 +284,22 @@ def test_random_forest_config_contains_confirmed_experiment_contract() -> None:
     assert config["formal"]["seeds"] == [42]
     assert config["run"]["runner"] == "zzm"
     assert len(grid) == 8
+
+
+def test_lstm_config_contains_confirmed_experiment_contract() -> None:
+    config = load_config(PROJECT_ROOT / "configs" / "lstm.yaml")
+    grid = make_parameter_grid(config["tuning"]["grid"])
+
+    assert config["target"]["horizons"] == [5, 10]
+    assert config["lookback"]["candidates"] == [5, 10]
+    assert list(config["split"]["strategies"]) == ["chronological_712"]
+    assert config["preprocessing"] == {
+        "add_missing_indicators": False,
+        "preserve_lag_groups": True,
+    }
+    assert config["formal"]["seeds"] == [42]
+    assert config["run"]["runner"] == "zzm"
+    assert len(grid) == 4
 
 
 def test_strategy_plan_uses_only_configured_strategy() -> None:

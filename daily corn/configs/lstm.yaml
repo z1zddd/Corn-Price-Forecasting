@@ -1,0 +1,63 @@
+data:
+  csv_path: datasets/processed/corn_market_daily_factors_v1.csv
+  date_col: date
+  target_col: dce_corn_close
+  expected_sha256: A95A68E27D4892A6DD8DC95B89377AD90F6F7FF784E0EA7310F5301CDE07DE79
+
+target:
+  type: future_price
+  horizons: [5, 10]
+
+lookback:
+  candidates: [5, 10]
+
+feature_set:
+  name: market_factors_lag1
+  external_lag: 1
+  max_training_missing_rate: 0.5
+
+preprocessing:
+  add_missing_indicators: false
+  preserve_lag_groups: true
+
+split:
+  strategies:
+    chronological_712:
+      ratios: [0.7, 0.1, 0.2]
+      refit_during_test: false
+  purge: auto_horizon
+  embargo: auto_horizon
+  shuffle: false
+
+tuning:
+  method: grid_search
+  metric: RMSE
+  seed: 42
+  grid:
+    hidden_size: [32, 64]
+    learning_rate: [0.001, 0.0005]
+
+model:
+  name: lstm
+  class_name: LSTMPriceRegressor
+  fixed_params:
+    num_layers: 1
+    dropout: 0.0
+    batch_size: 64
+    max_epochs: 60
+    patience: 8
+    weight_decay: 0.00001
+    gradient_clip: 1.0
+    device: cpu
+
+formal:
+  seeds: [42]
+
+evaluation:
+  transaction_cost_bps: [0, 2, 5, 10]
+  overlapping_economics: non_overlapping_sleeves
+
+run:
+  runner: zzm
+  dataset_name: corn_market_daily_factors_v1
+  model_name: lstm

@@ -110,24 +110,51 @@ def build_supervised_samples(
 
 
 class FoldPreprocessor:
-    def __init__(self, max_missing_rate: float = 0.5) -> None:
+    def __init__(
+        self,
+        max_missing_rate: float = 0.5,
+        add_missing_indicators: bool = True,
+        preserve_lag_groups: bool = False,
+    ) -> None:
         if not 0 <= max_missing_rate < 1:
             raise ValueError("max_missing_rate must be in [0, 1)")
         self.max_missing_rate = max_missing_rate
+        self.add_missing_indicators = bool(add_missing_indicators)
+        self.preserve_lag_groups = bool(preserve_lag_groups)
         self.selected_columns: list[str] = []
         self.imputer: SimpleImputer | None = None
 
     def fit(self, X_train: pd.DataFrame) -> "FoldPreprocessor":
         missing_rate = X_train.isna().mean()
-        self.selected_columns = [
+        eligible_columns = [
             column
             for column in X_train.columns
             if missing_rate[column] <= self.max_missing_rate
             and X_train[column].notna().any()
         ]
+        if self.preserve_lag_groups:
+            groups: dict[str, list[str]] = {}
+            for column in X_train.columns:
+                base_name = column.rsplit("__lag", maxsplit=1)[0]
+                groups.setdefault(base_name, []).append(column)
+            eligible = set(eligible_columns)
+            retained_groups = {
+                base_name
+                for base_name, columns in groups.items()
+                if all(column in eligible for column in columns)
+            }
+            self.selected_columns = [
+                column
+                for column in X_train.columns
+                if column.rsplit("__lag", maxsplit=1)[0] in retained_groups
+            ]
+        else:
+            self.selected_columns = eligible_columns
         if not self.selected_columns:
             raise ValueError("No features remain after training-fold missingness filtering")
-        self.imputer = SimpleImputer(strategy="median", add_indicator=True)
+        self.imputer = SimpleImputer(
+            strategy="median", add_indicator=self.add_missing_indicators
+        )
         self.imputer.fit(X_train[self.selected_columns])
         return self
 
@@ -210,4 +237,3 @@ def iter_expanding_origins(
         )
         assert_no_temporal_leakage(samples.metadata.iloc[eligible], prediction_anchor)
         yield ExpandingOrigin(eligible, prediction_idx, prediction_anchor)
-

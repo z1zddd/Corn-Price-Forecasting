@@ -17,6 +17,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import sklearn
+import torch
 import yaml
 
 
@@ -25,6 +26,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from models.machine_learning.RandomForest import RandomForestPriceRegressor
+from models.deep_learning.LSTM import LSTMPriceRegressor
 from scripts.data_processing.data_pipeline import (
     FixedSplit,
     FoldPreprocessor,
@@ -312,13 +314,47 @@ def _model_params(config: dict[str, Any], candidate: dict[str, Any], seed: int) 
     return params
 
 
+def build_model(
+    config: dict[str, Any],
+    candidate: dict[str, Any],
+    seed: int,
+    lookback: int,
+) -> RandomForestPriceRegressor | LSTMPriceRegressor:
+    params = _model_params(config, candidate, seed)
+    class_name = config["model"]["class_name"]
+    if class_name == "RandomForestPriceRegressor":
+        return RandomForestPriceRegressor(**params)
+    if class_name == "LSTMPriceRegressor":
+        params["lookback"] = int(lookback)
+        return LSTMPriceRegressor(**params)
+    raise ValueError(f"Unsupported model class: {class_name}")
+
+
+def _sample_lookback(samples: SupervisedSamples) -> int:
+    lags = [
+        int(column.rsplit("__lag", maxsplit=1)[1])
+        for column in samples.X.columns
+        if "__lag" in column
+    ]
+    if not lags:
+        raise ValueError("Cannot infer lookback from supervised sample columns")
+    return max(lags) + 1
+
+
 def _prepare_fold(
     samples: SupervisedSamples,
     train_idx: np.ndarray,
     evaluation_idx: np.ndarray,
-    max_missing_rate: float,
+    config: dict[str, Any],
 ) -> tuple[FoldPreprocessor, np.ndarray, np.ndarray]:
-    preprocessor = FoldPreprocessor(max_missing_rate=max_missing_rate)
+    preprocessing = config.get("preprocessing", {})
+    preprocessor = FoldPreprocessor(
+        max_missing_rate=float(config["feature_set"]["max_training_missing_rate"]),
+        add_missing_indicators=bool(
+            preprocessing.get("add_missing_indicators", True)
+        ),
+        preserve_lag_groups=bool(preprocessing.get("preserve_lag_groups", False)),
+    )
     X_train = preprocessor.fit_transform(samples.X.iloc[train_idx])
     X_evaluation = preprocessor.transform(samples.X.iloc[evaluation_idx])
     return preprocessor, X_train, X_evaluation
@@ -330,16 +366,19 @@ def tune_parameters(
     config: dict[str, Any],
     split_name: str,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    max_missing_rate = float(config["feature_set"]["max_training_missing_rate"])
     preprocessor, X_train, X_validation = _prepare_fold(
-        samples, split.train_idx, split.validation_idx, max_missing_rate
+        samples, split.train_idx, split.validation_idx, config
     )
     y_train = samples.y.iloc[split.train_idx].to_numpy(dtype=float)
     y_validation = samples.y.iloc[split.validation_idx].to_numpy(dtype=float)
     results: list[dict[str, Any]] = []
     for candidate in make_parameter_grid(config["tuning"]["grid"]):
-        params = _model_params(config, candidate, int(config["tuning"]["seed"]))
-        model = RandomForestPriceRegressor(**params).fit(X_train, y_train)
+        model = build_model(
+            config,
+            candidate,
+            int(config["tuning"]["seed"]),
+            _sample_lookback(samples),
+        ).fit(X_train, y_train, validation_data=(X_validation, y_validation))
         predicted = model.predict(X_validation)
         rmse = float(np.sqrt(np.mean((y_validation - predicted) ** 2)))
         results.append(
@@ -347,12 +386,16 @@ def tune_parameters(
                 "split_tuning_skeleton": split_name,
                 "validation_rmse": rmse,
                 "selected_feature_count": len(preprocessor.selected_columns),
+                "best_epoch": getattr(model, "best_epoch_", None),
                 **candidate,
             }
         )
     best = min(results, key=lambda item: item["validation_rmse"])
     candidate_names = set(config["tuning"]["grid"])
-    return {key: best[key] for key in candidate_names}, results
+    selected = {key: best[key] for key in candidate_names}
+    if best.get("best_epoch") is not None:
+        selected["max_epochs"] = int(best["best_epoch"])
+    return selected, results
 
 
 def _prediction_frame(
@@ -376,28 +419,29 @@ def run_fixed_setting(
     seed: int,
     checkpoint_path: Path | None,
 ) -> tuple[pd.DataFrame, dict[str, Any], dict[str, Any]]:
-    max_missing_rate = float(config["feature_set"]["max_training_missing_rate"])
     preprocessor, X_train, X_test = _prepare_fold(
-        samples, split.refit_idx, split.test_idx, max_missing_rate
+        samples, split.refit_idx, split.test_idx, config
     )
     first_test_anchor = samples.metadata.iloc[split.test_idx[0]]["anchor_date"]
     assert_no_temporal_leakage(samples.metadata.iloc[split.refit_idx], first_test_anchor)
-    params = _model_params(config, best_params, seed)
-    model = RandomForestPriceRegressor(**params).fit(
+    model = build_model(
+        config, best_params, seed, _sample_lookback(samples)
+    ).fit(
         X_train, samples.y.iloc[split.refit_idx].to_numpy(dtype=float)
     )
+    params = dict(model.params)
     predicted = model.predict(X_test)
     scale = _mase_scale(samples.y.iloc[split.refit_idx])
     if checkpoint_path is not None:
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump(
+        _atomic_joblib(
+            checkpoint_path,
             {
                 "model": model,
                 "preprocessor": preprocessor,
                 "params": params,
                 "selected_columns": preprocessor.selected_columns,
             },
-            checkpoint_path,
         )
     audit = {
         "train_start_date": samples.metadata.iloc[split.refit_idx[0]]["anchor_date"],
@@ -436,7 +480,6 @@ def run_expanding_setting(
     audits: list[dict[str, Any]] = []
     last_bundle: dict[str, Any] | None = None
     params = _model_params(config, best_params, seed)
-    max_missing_rate = float(config["feature_set"]["max_training_missing_rate"])
     completed_positions: set[int] = set()
     progress_predictions_path: Path | None = None
     progress_audits_path: Path | None = None
@@ -501,10 +544,13 @@ def run_expanding_setting(
             break
         prediction_idx = np.asarray([origin.prediction_idx], dtype=int)
         preprocessor, X_train, X_prediction = _prepare_fold(
-            samples, origin.train_idx, prediction_idx, max_missing_rate
+            samples, origin.train_idx, prediction_idx, config
         )
         y_train = samples.y.iloc[origin.train_idx].to_numpy(dtype=float)
-        model = RandomForestPriceRegressor(**params).fit(X_train, y_train)
+        model = build_model(
+            config, best_params, seed, _sample_lookback(samples)
+        ).fit(X_train, y_train)
+        params = dict(model.params)
         predicted = model.predict(X_prediction)
         scale = _mase_scale(y_train)
         prediction_frame = _prediction_frame(samples, prediction_idx, predicted, scale)
@@ -607,31 +653,38 @@ def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> 
         ratios=FIXED_STRATEGY_RATIOS[smoke_strategy],
         embargo=horizon,
     )
-    candidate = {
-        "n_estimators": 10,
-        "max_depth": 8,
-        "min_samples_leaf": 1,
-        "max_features": "sqrt",
-    }
+    grid_candidates = make_parameter_grid(config["tuning"]["grid"])
+    candidate = dict(grid_candidates[0])
+    smoke_config = deepcopy(config)
+    if config["model"]["class_name"] == "RandomForestPriceRegressor":
+        candidate["n_estimators"] = min(int(candidate["n_estimators"]), 10)
+    else:
+        smoke_config["model"]["fixed_params"]["max_epochs"] = 2
+        smoke_config["model"]["fixed_params"]["patience"] = 2
     with tempfile.TemporaryDirectory() as temporary_directory:
         checkpoint = Path(temporary_directory) / "smoke.joblib"
         predictions, _, _ = run_fixed_setting(
             samples,
             split,
-            config,
+            smoke_config,
             candidate,
             seed=42,
             checkpoint_path=checkpoint,
         )
         loaded = joblib.load(checkpoint)
-        if not isinstance(loaded["model"], RandomForestPriceRegressor):
+        expected_class = (
+            RandomForestPriceRegressor
+            if config["model"]["class_name"] == "RandomForestPriceRegressor"
+            else LSTMPriceRegressor
+        )
+        if not isinstance(loaded["model"], expected_class):
             raise TypeError("Checkpoint round-trip failed")
         expanding_smoke_predictions = 0
         if strategy_plan["run_expanding"]:
             expanding_predictions, _, expanding_audits, _ = run_expanding_setting(
                 samples,
                 split.test_idx,
-                config,
+                smoke_config,
                 candidate,
                 seed=42,
                 checkpoint_path=Path(temporary_directory) / "expanding_smoke.joblib",
@@ -647,23 +700,31 @@ def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> 
         transaction_cost_bps=config["evaluation"]["transaction_cost_bps"],
     )
 
-    benchmark_candidate = {
-        "n_estimators": 200,
-        "max_depth": None,
-        "min_samples_leaf": 1,
-        "max_features": 0.5,
-    }
+    benchmark_candidate = dict(grid_candidates[-1])
+    benchmark_config = deepcopy(config)
+    benchmark_epochs = None
+    epoch_scale = 1.0
+    if config["model"]["class_name"] == "LSTMPriceRegressor":
+        benchmark_epochs = min(
+            5, int(config["model"]["fixed_params"]["max_epochs"])
+        )
+        benchmark_config["model"]["fixed_params"]["max_epochs"] = benchmark_epochs
+        benchmark_config["model"]["fixed_params"]["patience"] = benchmark_epochs
+        epoch_scale = (
+            int(config["model"]["fixed_params"]["max_epochs"])
+            / benchmark_epochs
+        )
     benchmark_indices = split.refit_idx
     preprocessor, X_train, _ = _prepare_fold(
         samples,
         benchmark_indices,
         split.test_idx[:1],
-        float(config["feature_set"]["max_training_missing_rate"]),
+        benchmark_config,
     )
     del preprocessor
     started = time.perf_counter()
-    RandomForestPriceRegressor(
-        **_model_params(config, benchmark_candidate, 42)
+    build_model(
+        benchmark_config, benchmark_candidate, 42, lookback
     ).fit(X_train, samples.y.iloc[benchmark_indices].to_numpy(dtype=float))
     benchmark_seconds = time.perf_counter() - started
 
@@ -702,11 +763,14 @@ def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> 
         "smoke_price_rmse": smoke_metrics["price_rmse"],
         "expanding_smoke_predictions": expanding_smoke_predictions,
         "benchmark_worst_grid_fit_seconds": benchmark_seconds,
+        "benchmark_epochs": benchmark_epochs,
         "tuning_fits": tuning_fits,
         "fixed_fits": fixed_fits,
         "expanding_fits": expanding_fits,
         "total_fits": total_fits,
-        "estimated_serial_hours_at_benchmark_rate": benchmark_seconds * total_fits / 3600.0,
+        "estimated_serial_hours_at_benchmark_rate": (
+            benchmark_seconds * epoch_scale * total_fits / 3600.0
+        ),
     }
 
 
@@ -827,7 +891,7 @@ def _write_report(
         [column for column in stability_columns if column in seed_stability]
     ].copy()
     lines = [
-        "# Random Forest 日度回测报告",
+        f"# {config['run']['model_name']} 日度回测报告",
         "",
         f"- 运行标识：`{run_id}`",
         f"- 数据哈希：`{data_audit['sha256']}`",
@@ -908,6 +972,12 @@ def run_formal(
         "operating_system": platform.platform(),
         "python": sys.version,
         "scikit_learn": sklearn.__version__,
+        "torch": torch.__version__ if config["model"]["class_name"] == "LSTMPriceRegressor" else None,
+        "model_source": (
+            LSTMPriceRegressor.source
+            if config["model"]["class_name"] == "LSTMPriceRegressor"
+            else RandomForestPriceRegressor.source
+        ),
         "source_commit": source_commit,
         "data_sha256": data_audit["sha256"],
     }
