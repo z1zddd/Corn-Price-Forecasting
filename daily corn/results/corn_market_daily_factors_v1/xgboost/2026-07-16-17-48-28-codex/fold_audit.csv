@@ -1,0 +1,4 @@
+seed,horizon,split_strategy,train_start_date,train_end_date,train_max_target_date,validation_start_date,validation_end_date,test_start_date,test_end_date,first_test_anchor_date,first_test_target_date,train_count,validation_count,test_count
+42,5,chronological_811,2016-07-05,2024-06-19,2024-06-26,2024-06-20,2025-06-11,2025-06-19,2026-06-18,2025-06-19,2025-06-26,1933,236,243
+2024,5,chronological_811,2016-07-05,2024-06-19,2024-06-26,2024-06-20,2025-06-11,2025-06-19,2026-06-18,2025-06-19,2025-06-26,1933,236,243
+3407,5,chronological_811,2016-07-05,2024-06-19,2024-06-26,2024-06-20,2025-06-11,2025-06-19,2026-06-18,2025-06-19,2025-06-26,1933,236,243

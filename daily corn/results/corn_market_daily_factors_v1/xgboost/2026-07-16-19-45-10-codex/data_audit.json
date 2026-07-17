@@ -1,0 +1,10 @@
+{
+  "sha256": "a95a68e27d4892a6dd8dc95b89377ad90f6f7ff784e0ea7310f5301cde07de79",
+  "rows": 2426,
+  "columns": 39,
+  "date_min": "2016-06-29",
+  "date_max": "2026-06-26",
+  "duplicate_dates": 0,
+  "target_missing": 0,
+  "rows_with_missing": 2424
+}

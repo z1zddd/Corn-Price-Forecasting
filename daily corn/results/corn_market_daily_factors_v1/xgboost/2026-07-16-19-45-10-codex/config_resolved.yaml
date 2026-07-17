@@ -1,0 +1,62 @@
+data:
+  csv_path: datasets/processed/corn_market_daily_factors_v1.csv
+  date_col: date
+  target_col: dce_corn_close
+  feature_set: market_full_safe
+target:
+  type: future_price
+  horizons:
+  - 5
+lookback:
+  candidates:
+  - 5
+split:
+  strategies:
+  - chronological_811
+  purge: auto_horizon
+  embargo: auto_horizon
+  shuffle: false
+model:
+  name: xgboost
+  source: https://github.com/dmlc/xgboost
+  version: 3.3.0
+  license: Apache-2.0
+  params:
+    min_child_weight: 2.0
+    subsample: 0.9
+    colsample_bytree: 0.9
+    reg_lambda: 2.0
+    objective: reg:squarederror
+    tree_method: hist
+    n_jobs: 1
+tuning:
+  method: grid_search
+  metric: RMSE
+  grid:
+    n_estimators:
+    - 150
+    - 300
+    max_depth:
+    - 2
+    - 4
+    - 6
+    learning_rate:
+    - 0.03
+    - 0.08
+seeds:
+- 42
+- 2024
+- 3407
+environment:
+  name: local
+  device: cpu
+  python: codex-bundled-3.12
+evaluation:
+  signal_thresholds:
+  - 0.013
+  transaction_cost_bps:
+  - 0
+  - 2
+  - 5
+  - 10
+runner: codex

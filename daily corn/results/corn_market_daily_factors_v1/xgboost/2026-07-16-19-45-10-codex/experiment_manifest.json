@@ -1,0 +1,49 @@
+{
+  "run_id": "2026-07-16-19-45-10-codex",
+  "status": "COMPLETED",
+  "runner": "codex",
+  "dataset": "corn_market_daily_factors_v1",
+  "model": "xgboost",
+  "model_source": "https://github.com/dmlc/xgboost",
+  "model_version": "3.3.0",
+  "model_license": "Apache-2.0",
+  "horizon": 5,
+  "lookback": 5,
+  "split_strategy": "chronological_811",
+  "feature_set": "market_full_safe",
+  "seeds": [
+    42,
+    2024,
+    3407
+  ],
+  "signal_thresholds": [
+    0.013
+  ],
+  "started_at": "2026-07-16T19:45:10.167622+08:00",
+  "git_commit": null,
+  "python": "3.12.13",
+  "device": "cpu",
+  "completed_at": "2026-07-16T19:45:30.932132+08:00",
+  "data_sha256": "a95a68e27d4892a6dd8dc95b89377ad90f6f7ff784e0ea7310f5301cde07de79",
+  "best_params": {
+    "min_child_weight": 2.0,
+    "subsample": 0.9,
+    "colsample_bytree": 0.9,
+    "reg_lambda": 2.0,
+    "objective": "reg:squarederror",
+    "tree_method": "hist",
+    "n_jobs": 1,
+    "n_estimators": 300,
+    "max_depth": 2,
+    "learning_rate": 0.08
+  },
+  "validation_RMSE": 67.51245103405019,
+  "packages": {
+    "numpy": "2.5.1",
+    "pandas": "3.0.1",
+    "scikit-learn": "1.9.0",
+    "xgboost": "3.3.0",
+    "PyYAML": "6.0.3",
+    "joblib": "1.5.3"
+  }
+}
