@@ -80,7 +80,9 @@ def build_supervised_samples(
             if column != target_col
             and (
                 column.lower().startswith("target_")
-                or "future" in column.lower()
+                or column.lower().startswith("future_")
+                or "_future_" in column.lower()
+                or column.lower().endswith("_future")
                 or column.lower().endswith("_target")
                 or column.lower()
                 in {

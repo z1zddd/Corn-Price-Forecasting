@@ -536,6 +536,7 @@ def test_full_safe_applies_lag_only_to_unadjusted_external_fields() -> None:
             "dce_corn_close": np.arange(100.0, 108.0),
             "price_momentum_1d": np.arange(10.0, 18.0),
             "cbot_corn_close": np.arange(200.0, 208.0),
+            "corn_100ppi_main_futures_price_cny_t": np.arange(250.0, 258.0),
             "basis_rate_level_lag1d": np.arange(300.0, 308.0),
         }
     )
@@ -547,6 +548,10 @@ def test_full_safe_applies_lag_only_to_unadjusted_external_fields() -> None:
 
     assert second["price_momentum_1d__lag0"] == frame.iloc[1]["price_momentum_1d"]
     assert second["cbot_corn_close__lag0"] == frame.iloc[0]["cbot_corn_close"]
+    assert (
+        second["corn_100ppi_main_futures_price_cny_t__lag0"]
+        == frame.iloc[0]["corn_100ppi_main_futures_price_cny_t"]
+    )
     assert (
         second["basis_rate_level_lag1d__lag0"]
         == frame.iloc[1]["basis_rate_level_lag1d"]
