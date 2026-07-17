@@ -28,10 +28,10 @@ horizons = [5, 10, 15, 20]
 回看步长：
 
 ```text
-lookbacks = [5, 10, 15, 20]
+lookbacks = [5, 10, 15, 20, 30, 40, 60]
 ```
 
-二者独立组合，共 16 种 `horizon × lookback` 设置。
+二者独立组合，共 28 种 `horizon × lookback` 设置。
 
 ### 2.1 唯一预测目标
 
@@ -52,20 +52,25 @@ y_hat_price(t,h) = model(X[t-lookback+1:t])
 actual_return = actual_close_target / close_t - 1
 predicted_return = predicted_close_target / close_t - 1
 
-actual_trend = 1 if actual_close_target > close_t else 0
-predicted_trend = 1 if predicted_close_target > close_t else 0
+actual_trend = 1 if actual_return > 0 else 0
+
+# 阈值为 0 的原始方向结果，仅作为对照
+predicted_trend_threshold_0 = 1 if predicted_return > 0 else 0
+
+# 使用当前选定阈值的正式方向结果
+predicted_trend_selected = 1 if predicted_return > selected_threshold else 0
 ```
+
+真实趋势阈值始终固定为 0，不参与参数选择。`selected_threshold` 只校准模型预测方向，不得改变 `actual_trend` 的定义。固定时间划分中的阈值只从验证集选择；`expanding_rolling_backtest` 使用当前锚点可获得的校准样本在线更新阈值。
 
 最后 `horizon` 行没有未来价格，应从对应任务中删除。每个 horizon 单独生成目标并记录有效样本范围。
 
 ## 3. 特征使用
 
-框架支持三套特征范围：
+框架只使用 `full_safe` 特征集：
 
 | 特征集 | 内容 |
 | --- | --- |
-| `price_core` | DCE 玉米 OHLC、结算、成交量、持仓量及价格历史因子 |
-| `daily_factor_30` | 数据中已构造的 30 个日频候选因子 |
 | `full_safe` | 所有满足时点要求的原始字段和派生字段 |
 
 时点规则：
@@ -94,9 +99,10 @@ expanding_rolling_backtest
 ```
 
 - 按日期顺序固定切分；
-- 验证集用于选择参数；
-- 参数确定后，可在满足标签可知性要求的训练集与验证集上重新拟合一次；
-- 测试期内模型固定，不吸收测试标签，不重新训练。
+- 模型和预处理器只在训练集上拟合；
+- 验证集仅用于选择模型参数、lookback、预处理方式和趋势决策阈值；
+- 参数和阈值确定后均冻结，不得将验证集合并进训练集重新拟合；
+- 测试期内模型固定，不吸收测试标签，不重新训练或校准阈值。
 
 ### 4.2 `chronological_712`
 
@@ -104,7 +110,7 @@ expanding_rolling_backtest
 训练集 70% / 验证集 10% / 测试集 20%
 ```
 
-规则与 `chronological_811` 相同，仅测试区间更长，用于检验模型在较长样本外时期的稳定性。
+模型和预处理器只使用前 70% 训练集拟合，中间 10% 验证集只用于参数和阈值选择，最后 20% 测试集只用于最终评价。不得将验证集合并进训练集重新拟合。其余规则与 `chronological_811` 相同，仅测试区间更长，用于检验模型在较长样本外时期的稳定性。
 
 ### 4.3 `expanding_rolling_backtest`
 
@@ -121,11 +127,15 @@ train_start = first_eligible_sample
 train_end = latest sample whose target_date <= current_anchor_date
 ```
 
-- 参数在中间 10% 验证期确定并冻结；
+- 模型超参数、lookback 和预处理方式在中间 10% 验证期确定并冻结；
 - 默认每个测试锚点重新训练一次；
 - 可以使用测试期内已经实现且标签已知的早期样本；
 - 不能使用当前锚点之后才会实现的价格；
 - 不设置固定长度 rolling window。
+
+趋势阈值采用在线扩张校准：初始阈值只根据验证集选择；从每个测试锚点开始，在原验证集基础上加入 `target_date <= current_anchor_date` 的历史测试样本，重新搜索当前阈值。历史测试样本必须使用其当时生成并保存的样本外 `predicted_return`，不得用更新后的模型回看并替换历史预测。尚未实现标签的测试样本不得参与阈值选择。
+
+因此，测试期内冻结的是候选阈值网格、选择指标、并列规则和模型超参数；模型权重随扩张训练集更新，`selected_threshold` 随已实现标签的校准集更新。
 
 ## 5. 防止时间泄漏
 
@@ -148,6 +158,19 @@ train_target_date <= first_test_anchor_date
 - 输入窗口不得跨越不允许使用的数据边界；
 - 所有预处理器只能在当前训练数据上拟合；
 - 任一时间断言失败时终止该实验，不得只记录警告后继续。
+
+阈值选择还必须满足：
+
+```text
+fixed_split_threshold_source == validation
+threshold_calibration_max_target_date <= prediction_anchor_date
+```
+
+- 固定时间划分不得使用任何测试样本选择阈值；
+- expanding rolling 只能加入当前锚点前标签已经实现的历史测试样本；
+- 用于在线阈值校准的历史测试预测必须是当时保存的样本外预测；
+- 候选阈值网格、主指标和并列规则必须在测试开始前固定；
+- 任一阈值时间断言失败时终止该实验。
 
 每次运行保存：
 
@@ -222,12 +245,69 @@ predict(X_test) -> predicted_dce_corn_close
 
 - 模型超参数；
 - lookback；
-- 特征集；
 - 缺失处理和缩放方式；
 - 早停轮数；
-- 可选模型集成规则。
+- 可选模型集成规则；
+- 趋势决策阈值。
 
-测试集不得参与选择。模型运行3个种子，并报告均值、标准差和最差种子结果，不得只保留最佳种子。
+固定时间划分中，验证集只用于参数和阈值选择，不得在选择结束后并入训练集重新拟合。测试集不得参与模型参数选择。模型运行3个种子，并报告均值、标准差和最差种子结果，不得只保留最佳种子。
+
+### 9.1 趋势决策阈值选择
+
+实验开始前固定候选阈值网格：
+
+```text
+threshold_grid = [
+    0.00,
+    0.01,
+    0.02,
+    0.03,
+    0.04,
+    0.05,
+    0.06,
+    0.07,
+    0.08,
+    0.10
+]
+```
+
+阈值按以下独立配置分别选择：
+
+```text
+model
+× feature_set
+× horizon
+× lookback
+× split_strategy
+× seed
+```
+
+选择规则：
+
+1. 遍历固定 `threshold_grid`，计算每个候选阈值下校准集的 Balanced Accuracy；
+2. 选择 Balanced Accuracy 最高的阈值；
+3. 如果多个阈值并列，先选择 MCC 更高的阈值；
+4. 如果 MCC 仍并列，选择距离 0 更近的阈值；
+5. 不得根据测试结果筛选随机种子。
+
+固定时间划分只使用验证集预测选择一次阈值，并将其冻结用于整个测试集：
+
+```text
+validation_selected_threshold =
+    argmax_threshold validation_balanced_accuracy
+```
+
+`expanding_rolling_backtest` 的初始阈值同样只使用验证集。对测试锚点 `t`，校准集为验证集加上截至 `t` 已实现标签的历史测试样本：
+
+```text
+threshold_calibration_set(t) =
+    validation_predictions
+    + historical_test_predictions[
+        target_date <= current_anchor_date(t)
+      ]
+```
+
+在该扩张校准集上按相同网格和并列规则重新选择 `selected_threshold(t)`，然后用于当前锚点。阈值更新不得使用当前锚点或未来锚点尚未实现的真实标签。
 
 ## 10. 评价指标
 
@@ -237,17 +317,15 @@ predict(X_test) -> predicted_dce_corn_close
 
 - MAE；
 - RMSE；
-- MAPE；
-- sMAPE；
-- R²；
-- MASE；
-- 相对“未来价格等于当前价格”基线的误差改善率。
+- R²。
 
-主排序建议使用 RMSE 或 MASE，并同时检查 MAE 和 R²。
+价格指标主排序使用 RMSE，并同时检查 MAE 和 R²。
 
 ### 10.2 趋势指标
 
-根据预测价格与当前价格的大小关系派生趋势，至少报告：
+趋势指标必须同时报告阈值为 0 的对照结果和当前选定阈值下的正式结果。正式模型排序使用选定阈值对应的测试指标，阈值为 0 的结果仅作对照。
+
+两套结果至少报告：
 
 - Direction Accuracy；
 - Balanced Accuracy；
@@ -260,30 +338,49 @@ predict(X_test) -> predicted_dce_corn_close
 - 实际上涨率和预测上涨率；
 - 常量趋势预测检查。
 
+至少保存：
+
+```text
+validation_selected_threshold
+validation_ba_threshold_0
+validation_ba_selected
+validation_mcc_selected
+validation_actual_up_rate
+validation_predicted_up_rate_selected
+test_ba_threshold_0
+test_ba_selected
+test_mcc_selected
+test_actual_up_rate
+test_predicted_up_rate_selected
+```
+
+对于 `expanding_rolling_backtest`，`validation_selected_threshold` 表示测试开始时的初始阈值；正式测试指标按每个锚点当时的 `selected_threshold` 计算。
 
 ### 10.3 经济指标
 
-交易方向由预测价格派生：
+交易方向由预测收益和当前选定阈值派生，保持二元多空，不设置空仓区间：
 
 ```text
-position = +1 if predicted_close_target > close_t else -1
-strategy_return = position * actual_return
+position_threshold_0 = +1 if predicted_return > 0 else -1
+position_selected = +1 if predicted_return > selected_threshold else -1
+
+strategy_return_threshold_0 = position_threshold_0 * actual_return
+strategy_return_selected = position_selected * actual_return
+
+turnover_1 = 1
+turnover_t = abs(position_t - position_(t-1)) / 2
+net_strategy_return_t =
+    strategy_return_t - turnover_t * transaction_cost_bps / 10000
 ```
 
-至少报告：
+正式经济指标使用 `strategy_return_selected`，阈值为 0 的经济指标仅作为对照。首个仓位记一次建仓，后续多空切换记一次完整换仓，维持原方向的换手率为 0。交易成本分别报告 0、2、5、10 bp 情景；第 11 节的每个非重叠子序列独立计算仓位、换手和净收益。
+
+每个成本情景只报告：
 
 - 累计收益；
 - 年化收益；
-- Sharpe；
-- Sortino；
-- Calmar；
+- Sharpe Ratio；
 - 最大回撤；
-- Profit Factor；
-- 胜率；
-- 平均盈利和平均亏损；
-- 换手率；
-- 交易次数；
-- 0、2、5、10 bp 成本情景。
 
 经济指标只评价由价格预测产生的方向，不作为价格模型的唯一排序依据。
 
@@ -324,6 +421,17 @@ n_predictions
 price_metrics
 trend_metrics
 economic_metrics
+validation_selected_threshold
+validation_ba_threshold_0
+validation_ba_selected
+validation_mcc_selected
+test_ba_threshold_0
+test_ba_selected
+test_mcc_selected
+validation_actual_up_rate
+validation_predicted_up_rate_selected
+test_actual_up_rate
+test_predicted_up_rate_selected
 ```
 
 `chronological_712` 与 `expanding_rolling_backtest` 使用相同测试日期，因此应直接比较固定模型与动态扩张重训的指标差异。
@@ -357,6 +465,8 @@ economic_metrics
 4. 优先选择在三种数据划分策略下都稳定的模型；
 5. 不选择仅在单一策略或单一 horizon 上偶然高分的模型。
 
+趋势和经济指标的正式排序使用当前选定阈值对应的结果；阈值为 0 的结果只用于判断阈值校准带来的变化。价格指标不受趋势阈值影响。
+
 不同 horizon 可以选择不同最佳模型，但所有模型必须通过相同接口和相同评价流程。
 
 ## 14. 输出目录
@@ -367,6 +477,7 @@ experiments/<run_id>/
   data_audit.json
   experiment_manifest.json
   fold_audit.csv
+  threshold_audit.csv
   all_predictions.csv
   test_results_chronological_811.csv
   test_results_chronological_712.csv
@@ -398,13 +509,19 @@ predicted_dce_corn_close
 actual_return
 predicted_return
 actual_trend
-predicted_trend
+predicted_trend_threshold_0
+predicted_trend_selected
+selected_threshold
+threshold_calibration_end_date
+n_threshold_samples
 horizon
 lookback
 split_strategy
 model
 seed
 ```
+
+`threshold_audit.csv` 至少保存每次阈值选择对应的模型、特征集、horizon、lookback、划分策略、seed、预测锚点、校准数据截止日期、校准样本数、每个候选阈值的 Balanced Accuracy 和 MCC、最终阈值及并列处理结果。
 
 ## 15. 配置示例
 
@@ -419,18 +536,20 @@ target:
   horizons: [5, 10, 15, 20]
 
 lookback:
-  candidates: [5, 10, 15, 20]
+  candidates: [5, 10, 15, 20, 30, 40, 60]
 
 feature_sets:
-  enabled: [price_core, daily_factor_30, full_safe]
+  enabled: [full_safe]
 
 split:
   strategies:
     chronological_811:
       ratios: [0.8, 0.1, 0.1]
+      refit_with_validation: false
       refit_during_test: false
     chronological_712:
       ratios: [0.7, 0.1, 0.2]
+      refit_with_validation: false
       refit_during_test: false
     expanding_rolling_backtest:
       ratios: [0.7, 0.1, 0.2]
@@ -441,15 +560,33 @@ split:
   embargo: auto_horizon
   shuffle: false
 
+threshold_selection:
+  enabled: true
+  source: validation
+  metric: BalancedAccuracy
+  candidates: [0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.10]
+  tie_break: [higher_mcc, closer_to_zero]
+  apply_per: [model, feature_set, horizon, lookback, split_strategy, seed]
+  report_threshold_0: true
+  search_on_current_or_future_test: false
+  refit_with_validation: false
+  expanding_update:
+    enabled_for: [expanding_rolling_backtest]
+    include_validation: true
+    include_realized_test: true
+    window: expanding
+    realized_label_rule: target_date_lte_current_anchor_date
+    use_stored_out_of_sample_predictions: true
+
 preprocessing:
   fit_on_train_only: true
   imputer: median
   scaler: model_specific
 
 evaluation:
-  price_metrics: [MAE, RMSE, MAPE, sMAPE, R2, MASE]
+  price_metrics: [MAE, RMSE, R2]
   trend_metrics: [DirectionAccuracy, BalancedAccuracy, F1, MCC]
-  economic_metrics: [AnnRet, Sharpe, Sortino, MaxDD, ProfitFactor]
+  economic_metrics: [CumulativeReturn, AnnRet, Sharpe, MaxDD]
   transaction_cost_bps: [0, 2, 5, 10]
   block_bootstrap: true
 
@@ -466,7 +603,7 @@ models:
 for horizon in [5, 10, 15, 20]:
     生成未来 dce_corn_close 目标
 
-    for lookback in [5, 10, 15, 20]:
+    for lookback in [5, 10, 15, 20, 30, 40, 60]:
         构造历史输入窗口
 
         for split_strategy in [chronological_811,
@@ -475,12 +612,28 @@ for horizon in [5, 10, 15, 20]:
             生成时间划分并执行 purge/embargo
 
             for model in configured_models:
-                在训练数据上拟合预处理器
-                训练价格预测模型
-                输出 predicted_dce_corn_close
-                由价格派生 predicted_return 和 predicted_trend
-                计算价格、趋势和经济指标
-                保存预测、指标和审计记录
+                只在训练集拟合预处理器和价格预测模型
+                在验证集输出 predicted_dce_corn_close
+                计算验证集 predicted_return
+                在固定网格中选择 BA 最高的初始阈值
+
+                if split_strategy 是固定时间划分:
+                    冻结模型和阈值
+                    不合并训练集与验证集
+                    不重新训练模型或搜索阈值
+                    预测完整测试集
+
+                if split_strategy 是 expanding_rolling_backtest:
+                    for current_anchor_date in rolling_test_anchors:
+                        使用当前已知标签扩张训练集并重新训练模型
+                        使用验证集和已实现标签的历史测试样本扩张阈值校准集
+                        断言校准样本 target_date <= current_anchor_date
+                        重新选择当前阈值
+                        预测当前锚点并保存样本外预测
+
+                计算 threshold=0 的对照指标
+                计算 selected_threshold 下的正式指标
+                保存预测、阈值、指标和审计记录
 
 分别汇总三种数据划分策略
 生成策略对比和最终报告
@@ -489,12 +642,16 @@ for horizon in [5, 10, 15, 20]:
 ## 17. 最低验收条件
 
 - 5、10、15、20 四个预测步长全部运行；
-- 5、10、15、20 四个回看步长全部运行；
+- 5、10、15、20、30、40、60 七个回看步长全部运行；
 - 三种数据划分策略分别产生测试结果；
 - 所有模型直接输出未来 `dce_corn_close`；
 - 趋势和收益均由价格预测结果派生；
-- 固定切分测试期不重训；
-- expanding rolling backtest 只使用当前时点已知标签；
+- 固定切分只使用验证集选择一次阈值，测试期不重训、不重新搜索阈值；
+- 固定切分不得将验证集合并进训练集重新拟合；
+- expanding rolling backtest 的模型和阈值更新只使用当前时点已知标签；
+- expanding rolling 的在线阈值校准只使用验证集和已实现标签的历史样本外测试预测；
+- 每个模型、特征集、horizon、lookback、划分策略和 seed 独立选择阈值；
+- 同时报告 threshold=0 对照结果和 selected_threshold 正式结果；
 - 所有预处理只在训练数据上拟合；
 - 重叠持有期没有被直接连乘；
 - 完整记录模型失败和时间审计信息。
