@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import importlib
 import sys
 from pathlib import Path
 
@@ -13,7 +14,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from models.machine_learning.RandomForest import RandomForestPriceRegressor
-from models.deep_learning.LSTM import LSTMPriceRegressor
+try:
+    from models.deep_learning.LSTM import LSTMPriceRegressor
+except ModuleNotFoundError:
+    LSTMPriceRegressor = None
 from scripts.data_processing.data_pipeline import (
     FoldPreprocessor,
     assert_no_temporal_leakage,
@@ -165,6 +169,7 @@ def test_random_forest_outputs_prices_and_round_trips(tmp_path: Path) -> None:
     np.testing.assert_allclose(predictions, loaded.predict(X[:5]))
 
 
+@pytest.mark.skipif(LSTMPriceRegressor is None, reason="PyTorch is not installed")
 def test_lstm_outputs_prices_and_round_trips(tmp_path: Path) -> None:
     rng = np.random.default_rng(42)
     X = rng.normal(size=(48, 20)).astype(np.float32)
@@ -194,6 +199,7 @@ def test_lstm_outputs_prices_and_round_trips(tmp_path: Path) -> None:
     np.testing.assert_allclose(predictions, loaded.predict(X[40:]), rtol=1e-5)
 
 
+@pytest.mark.skipif(LSTMPriceRegressor is None, reason="PyTorch is not installed")
 def test_lstm_refit_without_validation_keeps_selected_final_epoch() -> None:
     rng = np.random.default_rng(7)
     X = rng.normal(size=(48, 20)).astype(np.float32)
@@ -217,6 +223,7 @@ def test_lstm_refit_without_validation_keeps_selected_final_epoch() -> None:
     assert model.best_epoch_ == 5
 
 
+@pytest.mark.skipif(LSTMPriceRegressor is None, reason="PyTorch is not installed")
 def test_model_factory_builds_lstm_from_config() -> None:
     config = load_config(PROJECT_ROOT / "configs" / "lstm.yaml")
     model = build_model(
@@ -230,6 +237,7 @@ def test_model_factory_builds_lstm_from_config() -> None:
     assert model.params["lookback"] == 5
 
 
+@pytest.mark.skipif(LSTMPriceRegressor is None, reason="PyTorch is not installed")
 def test_lstm_tuning_returns_validation_selected_epoch() -> None:
     config = load_config(PROJECT_ROOT / "configs" / "lstm.yaml")
     config["model"]["fixed_params"]["hidden_size"] = 8
@@ -264,11 +272,12 @@ def test_evaluation_derives_trend_and_non_overlapping_economics() -> None:
     )
 
     assert enriched["actual_trend"].tolist() == [1, 0] * 6
-    assert enriched["predicted_trend"].tolist() == [1, 0] * 6
+    assert enriched["predicted_trend_threshold_0"].tolist() == [1, 0] * 6
+    assert enriched["predicted_trend_selected"].tolist() == [1, 0] * 6
     assert metrics["price_rmse"] > 0
     assert metrics["trend_direction_accuracy"] == 1.0
-    assert "economic_0bp_mean_sharpe" in metrics
-    assert "economic_2bp_worst_cumulative_return" in metrics
+    assert "economic_selected_0bp_mean_sharpe" in metrics
+    assert "economic_selected_2bp_worst_cumulative_return" in metrics
 
 
 def test_random_forest_config_contains_confirmed_experiment_contract() -> None:
@@ -373,14 +382,17 @@ def test_fixed_and_expanding_runs_emit_complete_audits(tmp_path: Path) -> None:
     assert final_selected_columns
 
 
-def test_economic_risk_metrics_include_initial_drawdown_and_downside_deviation() -> None:
+def test_economic_metrics_only_keep_framework_metrics() -> None:
     returns = np.asarray([-0.10, 0.05])
     metrics = _economic_metrics(returns, horizon=2)
-    expected_downside_deviation = np.sqrt((0.10**2 + 0.0**2) / 2)
-    expected_sortino = returns.mean() * np.sqrt(126.0) / expected_downside_deviation
 
     assert metrics["max_drawdown"] == pytest.approx(0.10)
-    assert metrics["sortino"] == pytest.approx(expected_sortino)
+    assert set(metrics) == {
+        "cumulative_return",
+        "annualized_return",
+        "sharpe",
+        "max_drawdown",
+    }
 
 
 def test_worst_economic_aggregation_respects_metric_direction() -> None:
@@ -514,3 +526,185 @@ def test_expanding_run_resumes_without_duplicate_origins(tmp_path: Path) -> None
     assert len(resumed_audits) == len(split.test_idx)
     state = json.loads((progress / "progress_state.json").read_text(encoding="utf-8"))
     assert state["status"] == "COMPLETED"
+
+
+def test_full_safe_applies_lag_only_to_unadjusted_external_fields() -> None:
+    dates = pd.bdate_range("2024-01-02", periods=8)
+    frame = pd.DataFrame(
+        {
+            "date": dates,
+            "dce_corn_close": np.arange(100.0, 108.0),
+            "price_momentum_1d": np.arange(10.0, 18.0),
+            "cbot_corn_close": np.arange(200.0, 208.0),
+            "basis_rate_level_lag1d": np.arange(300.0, 308.0),
+        }
+    )
+
+    samples = build_supervised_samples(
+        frame, horizon=1, lookback=1, feature_set="full_safe"
+    )
+    second = samples.X.iloc[1]
+
+    assert second["price_momentum_1d__lag0"] == frame.iloc[1]["price_momentum_1d"]
+    assert second["cbot_corn_close__lag0"] == frame.iloc[0]["cbot_corn_close"]
+    assert (
+        second["basis_rate_level_lag1d__lag0"]
+        == frame.iloc[1]["basis_rate_level_lag1d"]
+    )
+
+
+def test_full_safe_rejects_future_or_target_features() -> None:
+    frame = make_frame(20)
+    frame["target_future_return"] = 1.0
+
+    with pytest.raises(ValueError, match="Forbidden full_safe"):
+        build_supervised_samples(
+            frame, horizon=1, lookback=1, feature_set="full_safe"
+        )
+
+
+def test_fixed_setting_never_refits_with_validation_data(tmp_path: Path) -> None:
+    config = load_config(PROJECT_ROOT / "configs" / "random_forest.yaml")
+    config["model"]["fixed_params"]["n_jobs"] = 1
+    samples = build_supervised_samples(make_frame(100), horizon=5, lookback=5)
+    split = make_fixed_split(samples, ratios=(0.7, 0.1, 0.2), embargo=5)
+
+    predictions, _, audit = run_fixed_setting(
+        samples,
+        split,
+        config,
+        {
+            "n_estimators": 10,
+            "max_depth": 4,
+            "min_samples_leaf": 1,
+            "max_features": "sqrt",
+        },
+        seed=42,
+        checkpoint_path=tmp_path / "fixed.joblib",
+    )
+
+    assert audit["n_train"] == len(split.train_idx)
+    assert audit["train_end_date"] < samples.metadata.iloc[split.validation_idx[0]][
+        "anchor_date"
+    ]
+    assert {
+        "selected_threshold",
+        "threshold_calibration_end_date",
+        "n_threshold_samples",
+    }.issubset(predictions.columns)
+
+
+def test_threshold_selection_uses_ba_then_mcc_then_closest_to_zero() -> None:
+    evaluation = importlib.import_module("scripts.evaluation.evaluate")
+    select_threshold = getattr(evaluation, "select_trend_threshold")
+    actual_return = np.asarray([0.02, -0.01, 0.03, -0.02])
+    predicted_return = np.asarray([0.03, 0.005, 0.04, 0.005])
+
+    selected, summary, audit = select_threshold(
+        actual_return,
+        predicted_return,
+        candidates=[0.00, 0.01, 0.02],
+    )
+
+    assert selected == pytest.approx(0.01)
+    assert summary["validation_ba_selected"] == pytest.approx(1.0)
+    assert len(audit) == 3
+    assert sum(bool(row["is_selected"]) for row in audit) == 1
+    assert all(
+        row["selection_rule"] == "balanced_accuracy,higher_mcc,closer_to_zero"
+        for row in audit
+    )
+
+
+def test_evaluation_reports_only_framework_price_and_economic_metrics() -> None:
+    predictions = pd.DataFrame(
+        {
+            "anchor_date": pd.bdate_range("2024-01-02", periods=12),
+            "close_t": np.full(12, 100.0),
+            "actual_dce_corn_close": [102, 98] * 6,
+            "predicted_dce_corn_close": [103, 101] * 6,
+        }
+    )
+
+    metrics, enriched = evaluate_predictions(
+        predictions,
+        horizon=2,
+        mase_scale=1.0,
+        transaction_cost_bps=[0, 2],
+        selected_threshold=0.01,
+    )
+
+    assert {"price_mae", "price_rmse", "price_r2"}.issubset(metrics)
+    assert not any(
+        key.startswith(("price_mape", "price_smape", "price_mase"))
+        for key in metrics
+    )
+    assert {
+        "predicted_trend_threshold_0",
+        "predicted_trend_selected",
+        "selected_threshold",
+    }.issubset(enriched.columns)
+    assert not any(
+        token in key
+        for key in metrics
+        for token in ("sortino", "calmar", "profit_factor", "win_rate")
+    )
+
+
+def test_xgboost_outputs_prices_and_round_trips(tmp_path: Path) -> None:
+    import xgboost
+
+    module = importlib.import_module("models.machine_learning.XGBoost")
+    model_class = getattr(module, "XGBoostPriceRegressor")
+    X = np.arange(180, dtype=float).reshape(60, 3)
+    y = 1800.0 + X[:, 0] * 0.5
+    model = model_class(
+        n_estimators=20,
+        max_depth=3,
+        learning_rate=0.1,
+        tree_method="hist",
+        device="cpu",
+        random_state=42,
+        n_jobs=1,
+    )
+    model.fit(X[:50], y[:50], validation_data=(X[50:], y[50:]))
+    checkpoint = tmp_path / "xgboost.joblib"
+    model.save(checkpoint)
+    loaded = model_class.load(checkpoint)
+
+    predictions = model.predict(X[50:])
+    assert model_class.runtime_version == xgboost.__version__
+    assert predictions.shape == (10,)
+    assert np.isfinite(predictions).all()
+    np.testing.assert_allclose(predictions, loaded.predict(X[50:]))
+
+
+def test_xgboost_config_matches_confirmed_scope() -> None:
+    config = load_config(PROJECT_ROOT / "configs" / "xgboost.yaml")
+    grid = make_parameter_grid(config["tuning"]["grid"])
+
+    assert config["target"]["horizons"] == [5, 10, 15, 20]
+    assert config["lookback"]["candidates"] == [5, 10, 15, 20, 30, 40, 60]
+    assert list(config["split"]["strategies"]) == [
+        "chronological_811",
+        "chronological_712",
+    ]
+    assert config["feature_set"]["name"] == "full_safe"
+    assert config["formal"]["seeds"] == [42]
+    assert config["model"]["source_version"] == "3.2.0"
+    assert config["model"]["fixed_params"]["device"] == "cuda"
+    assert len(grid) == 8
+
+
+def test_xgboost_runtime_version_must_match_config() -> None:
+    import xgboost
+
+    runner = importlib.import_module("scripts.experiments.run_experiment")
+    validate_runtime = getattr(runner, "validate_model_runtime")
+    config = load_config(PROJECT_ROOT / "configs" / "xgboost.yaml")
+    config["model"]["source_version"] = "0.0.0"
+    with pytest.raises(RuntimeError, match="XGBoost runtime version"):
+        validate_runtime(config)
+
+    config["model"]["source_version"] = xgboost.__version__
+    validate_runtime(config)

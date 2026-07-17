@@ -60,6 +60,7 @@ def build_supervised_samples(
     date_col: str = "date",
     target_col: str = "dce_corn_close",
     external_lag: int = 1,
+    feature_set: str | None = None,
 ) -> SupervisedSamples:
     if horizon <= 0 or lookback <= 0:
         raise ValueError("horizon and lookback must be positive")
@@ -72,9 +73,49 @@ def build_supervised_samples(
         raise ValueError(f"Target column not found: {target_col}")
 
     feature_columns = [c for c in ordered.columns if c != date_col]
+    if feature_set == "full_safe":
+        forbidden_columns = [
+            column
+            for column in feature_columns
+            if column != target_col
+            and (
+                column.lower().startswith("target_")
+                or "future" in column.lower()
+                or column.lower().endswith("_target")
+                or column.lower()
+                in {
+                    "actual_return",
+                    "predicted_return",
+                    "actual_trend",
+                    "predicted_trend",
+                }
+            )
+        ]
+        if forbidden_columns:
+            raise ValueError(
+                f"Forbidden full_safe feature columns: {sorted(forbidden_columns)}"
+            )
     external_columns = [c for c in feature_columns if c != target_col]
     features = ordered[feature_columns].apply(pd.to_numeric, errors="coerce")
-    if external_columns and external_lag:
+    if feature_set == "full_safe":
+        lagged_raw_fields = {
+            "domestic_corn_spot_price_cny_t",
+            "corn_basis_cny_t",
+            "corn_basis_rate",
+            "corn_100ppi_main_futures_price_cny_t",
+            "corn_100ppi_nearby_futures_price_cny_t",
+            "corn_100ppi_nearby_basis_cny_t",
+            "corn_100ppi_nearby_basis_rate",
+        }
+        columns_to_lag = [
+            column
+            for column in external_columns
+            if not column.endswith("_lag1d")
+            and (column.startswith("cbot_") or column in lagged_raw_fields)
+        ]
+        if columns_to_lag:
+            features.loc[:, columns_to_lag] = features[columns_to_lag].shift(1)
+    elif external_columns and external_lag:
         features.loc[:, external_columns] = features[external_columns].shift(external_lag)
 
     flattened_columns = [

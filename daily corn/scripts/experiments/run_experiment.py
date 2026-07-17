@@ -17,8 +17,12 @@ import joblib
 import numpy as np
 import pandas as pd
 import sklearn
-import torch
 import yaml
+
+try:
+    import torch
+except ModuleNotFoundError:
+    torch = None
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -26,7 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from models.machine_learning.RandomForest import RandomForestPriceRegressor
-from models.deep_learning.LSTM import LSTMPriceRegressor
+from models.machine_learning.XGBoost import XGBoostPriceRegressor
 from scripts.data_processing.data_pipeline import (
     FixedSplit,
     FoldPreprocessor,
@@ -37,7 +41,7 @@ from scripts.data_processing.data_pipeline import (
     load_daily_data,
     make_fixed_split,
 )
-from scripts.evaluation.evaluate import evaluate_predictions
+from scripts.evaluation.evaluate import evaluate_predictions, select_trend_threshold
 
 
 class ExperimentContractError(RuntimeError):
@@ -319,15 +323,42 @@ def build_model(
     candidate: dict[str, Any],
     seed: int,
     lookback: int,
-) -> RandomForestPriceRegressor | LSTMPriceRegressor:
+) -> Any:
     params = _model_params(config, candidate, seed)
     class_name = config["model"]["class_name"]
     if class_name == "RandomForestPriceRegressor":
         return RandomForestPriceRegressor(**params)
     if class_name == "LSTMPriceRegressor":
+        from models.deep_learning.LSTM import LSTMPriceRegressor
+
         params["lookback"] = int(lookback)
         return LSTMPriceRegressor(**params)
+    if class_name == "XGBoostPriceRegressor":
+        return XGBoostPriceRegressor(**params)
     raise ValueError(f"Unsupported model class: {class_name}")
+
+
+def _expected_model_class(class_name: str) -> type:
+    if class_name == "RandomForestPriceRegressor":
+        return RandomForestPriceRegressor
+    if class_name == "XGBoostPriceRegressor":
+        return XGBoostPriceRegressor
+    if class_name == "LSTMPriceRegressor":
+        from models.deep_learning.LSTM import LSTMPriceRegressor
+
+        return LSTMPriceRegressor
+    raise ValueError(f"Unsupported model class: {class_name}")
+
+
+def validate_model_runtime(config: dict[str, Any]) -> None:
+    if config["model"]["class_name"] != "XGBoostPriceRegressor":
+        return
+    expected = str(config["model"]["source_version"])
+    actual = XGBoostPriceRegressor.runtime_version
+    if actual != expected:
+        raise RuntimeError(
+            f"XGBoost runtime version {actual} does not match config {expected}"
+        )
 
 
 def _sample_lookback(samples: SupervisedSamples) -> int:
@@ -419,19 +450,52 @@ def run_fixed_setting(
     seed: int,
     checkpoint_path: Path | None,
 ) -> tuple[pd.DataFrame, dict[str, Any], dict[str, Any]]:
-    preprocessor, X_train, X_test = _prepare_fold(
-        samples, split.refit_idx, split.test_idx, config
+    preprocessing = config.get("preprocessing", {})
+    preprocessor = FoldPreprocessor(
+        max_missing_rate=float(config["feature_set"]["max_training_missing_rate"]),
+        add_missing_indicators=bool(
+            preprocessing.get("add_missing_indicators", True)
+        ),
+        preserve_lag_groups=bool(preprocessing.get("preserve_lag_groups", False)),
     )
+    X_train = preprocessor.fit_transform(samples.X.iloc[split.train_idx])
+    X_validation = preprocessor.transform(samples.X.iloc[split.validation_idx])
+    X_test = preprocessor.transform(samples.X.iloc[split.test_idx])
+    y_train = samples.y.iloc[split.train_idx].to_numpy(dtype=float)
+    y_validation = samples.y.iloc[split.validation_idx].to_numpy(dtype=float)
     first_test_anchor = samples.metadata.iloc[split.test_idx[0]]["anchor_date"]
-    assert_no_temporal_leakage(samples.metadata.iloc[split.refit_idx], first_test_anchor)
+    assert_no_temporal_leakage(samples.metadata.iloc[split.train_idx], first_test_anchor)
     model = build_model(
         config, best_params, seed, _sample_lookback(samples)
     ).fit(
-        X_train, samples.y.iloc[split.refit_idx].to_numpy(dtype=float)
+        X_train,
+        y_train,
+        validation_data=(X_validation, y_validation),
     )
     params = dict(model.params)
+    validation_predicted = model.predict(X_validation)
     predicted = model.predict(X_test)
-    scale = _mase_scale(samples.y.iloc[split.refit_idx])
+    validation_close = samples.metadata.iloc[split.validation_idx]["close_t"].to_numpy(
+        dtype=float
+    )
+    validation_actual_return = y_validation / validation_close - 1.0
+    validation_predicted_return = validation_predicted / validation_close - 1.0
+    selected_threshold, threshold_summary, threshold_candidates = select_trend_threshold(
+        validation_actual_return,
+        validation_predicted_return,
+        config.get("threshold_selection", {}).get(
+            "candidates",
+            [0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.10],
+        ),
+    )
+    calibration_max_target_date = samples.metadata.iloc[split.validation_idx][
+        "target_date"
+    ].max()
+    if calibration_max_target_date > first_test_anchor:
+        raise AssertionError(
+            "Threshold calibration uses a label unavailable at the first test anchor"
+        )
+    scale = _mase_scale(y_train)
     if checkpoint_path is not None:
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
         _atomic_joblib(
@@ -444,22 +508,31 @@ def run_fixed_setting(
             },
         )
     audit = {
-        "train_start_date": samples.metadata.iloc[split.refit_idx[0]]["anchor_date"],
-        "train_end_date": samples.metadata.iloc[split.refit_idx[-1]]["anchor_date"],
-        "train_max_target_date": samples.metadata.iloc[split.refit_idx]["target_date"].max(),
+        "train_start_date": samples.metadata.iloc[split.train_idx[0]]["anchor_date"],
+        "train_end_date": samples.metadata.iloc[split.train_idx[-1]]["anchor_date"],
+        "train_max_target_date": samples.metadata.iloc[split.train_idx]["target_date"].max(),
         "validation_start_date": samples.metadata.iloc[split.validation_idx[0]]["anchor_date"],
         "validation_end_date": samples.metadata.iloc[split.validation_idx[-1]]["anchor_date"],
         "test_start_date": samples.metadata.iloc[split.test_idx[0]]["anchor_date"],
         "test_end_date": samples.metadata.iloc[split.test_idx[-1]]["anchor_date"],
         "prediction_anchor_date": samples.metadata.iloc[split.test_idx[0]]["anchor_date"],
         "prediction_target_date": samples.metadata.iloc[split.test_idx[0]]["target_date"],
-        "n_train": len(split.refit_idx),
+        "n_train": len(split.train_idx),
         "n_predictions": len(split.test_idx),
+        "fixed_split_threshold_source": "validation",
+        "threshold_calibration_max_target_date": calibration_max_target_date,
+        "n_threshold_samples": len(split.validation_idx),
         "selected_feature_count": len(preprocessor.selected_columns),
         "selected_columns_hash": _columns_hash(preprocessor.selected_columns),
         "selected_columns": preprocessor.selected_columns,
+        "threshold_summary": threshold_summary,
+        "threshold_candidates": threshold_candidates,
     }
-    return _prediction_frame(samples, split.test_idx, predicted, scale), params, audit
+    prediction_frame = _prediction_frame(samples, split.test_idx, predicted, scale)
+    prediction_frame["selected_threshold"] = selected_threshold
+    prediction_frame["threshold_calibration_end_date"] = calibration_max_target_date
+    prediction_frame["n_threshold_samples"] = len(split.validation_idx)
+    return prediction_frame, params, audit
 
 
 def run_expanding_setting(
@@ -632,6 +705,7 @@ def _data_audit(frame: pd.DataFrame, data_path: Path) -> dict[str, Any]:
 
 
 def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> dict[str, Any]:
+    validate_model_runtime(config)
     strategy_plan = resolve_strategy_plan(config)
     data_path = project_root / config["data"]["csv_path"]
     if _sha256(data_path) != config["data"]["expected_sha256"]:
@@ -646,6 +720,7 @@ def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> 
         horizon=horizon,
         lookback=lookback,
         external_lag=int(config["feature_set"]["external_lag"]),
+        feature_set=config["feature_set"]["name"],
     )
     smoke_strategy = strategy_plan["tuning"][0]
     split = make_fixed_split(
@@ -658,6 +733,9 @@ def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> 
     smoke_config = deepcopy(config)
     if config["model"]["class_name"] == "RandomForestPriceRegressor":
         candidate["n_estimators"] = min(int(candidate["n_estimators"]), 10)
+    elif config["model"]["class_name"] == "XGBoostPriceRegressor":
+        smoke_config["model"]["fixed_params"]["n_estimators"] = 10
+        smoke_config["model"]["fixed_params"]["early_stopping_rounds"] = 3
     else:
         smoke_config["model"]["fixed_params"]["max_epochs"] = 2
         smoke_config["model"]["fixed_params"]["patience"] = 2
@@ -672,11 +750,7 @@ def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> 
             checkpoint_path=checkpoint,
         )
         loaded = joblib.load(checkpoint)
-        expected_class = (
-            RandomForestPriceRegressor
-            if config["model"]["class_name"] == "RandomForestPriceRegressor"
-            else LSTMPriceRegressor
-        )
+        expected_class = _expected_model_class(config["model"]["class_name"])
         if not isinstance(loaded["model"], expected_class):
             raise TypeError("Checkpoint round-trip failed")
         expanding_smoke_predictions = 0
@@ -714,18 +788,28 @@ def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> 
             int(config["model"]["fixed_params"]["max_epochs"])
             / benchmark_epochs
         )
-    benchmark_indices = split.refit_idx
-    preprocessor, X_train, _ = _prepare_fold(
+    benchmark_indices = split.train_idx
+    preprocessor, X_train, X_validation = _prepare_fold(
         samples,
         benchmark_indices,
-        split.test_idx[:1],
+        split.validation_idx,
         benchmark_config,
     )
     del preprocessor
+    validation_data = None
+    if config["model"]["class_name"] == "XGBoostPriceRegressor":
+        validation_data = (
+            X_validation,
+            samples.y.iloc[split.validation_idx].to_numpy(dtype=float),
+        )
     started = time.perf_counter()
     build_model(
         benchmark_config, benchmark_candidate, 42, lookback
-    ).fit(X_train, samples.y.iloc[benchmark_indices].to_numpy(dtype=float))
+    ).fit(
+        X_train,
+        samples.y.iloc[benchmark_indices].to_numpy(dtype=float),
+        validation_data=validation_data,
+    )
     benchmark_seconds = time.perf_counter() - started
 
     grid_size = len(make_parameter_grid(config["tuning"]["grid"]))
@@ -747,6 +831,7 @@ def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> 
                     horizon=current_horizon,
                     lookback=current_lookback,
                     external_lag=int(config["feature_set"]["external_lag"]),
+                    feature_set=config["feature_set"]["name"],
                 )
                 current_split = make_fixed_split(
                     current_samples,
@@ -869,10 +954,10 @@ def _write_report(
         "price_rmse",
         "price_mae",
         "trend_direction_accuracy",
-        "economic_0bp_mean_cumulative_return",
-        "economic_0bp_mean_sharpe",
-        "economic_0bp_mean_max_drawdown",
-        "economic_10bp_mean_cumulative_return",
+        "economic_selected_0bp_mean_cumulative_return",
+        "economic_selected_0bp_mean_sharpe",
+        "economic_selected_0bp_mean_max_drawdown",
+        "economic_selected_10bp_mean_cumulative_return",
     ]
     detail = metrics[[column for column in detail_columns if column in metrics]].copy()
     stability_columns = [
@@ -937,6 +1022,7 @@ def run_formal(
     project_root: Path = PROJECT_ROOT,
     source_commit: str | None = None,
 ) -> dict[str, Any]:
+    validate_model_runtime(config)
     strategy_plan = resolve_strategy_plan(config)
     runner = config["run"]["runner"]
     if not runner or any(character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-" for character in runner):
@@ -972,12 +1058,17 @@ def run_formal(
         "operating_system": platform.platform(),
         "python": sys.version,
         "scikit_learn": sklearn.__version__,
-        "torch": torch.__version__ if config["model"]["class_name"] == "LSTMPriceRegressor" else None,
-        "model_source": (
-            LSTMPriceRegressor.source
-            if config["model"]["class_name"] == "LSTMPriceRegressor"
-            else RandomForestPriceRegressor.source
+        "torch": (
+            torch.__version__
+            if config["model"]["class_name"] == "LSTMPriceRegressor" and torch is not None
+            else None
         ),
+        "xgboost": (
+            XGBoostPriceRegressor.runtime_version
+            if config["model"]["class_name"] == "XGBoostPriceRegressor"
+            else None
+        ),
+        "model_source": _expected_model_class(config["model"]["class_name"]).source,
         "source_commit": source_commit,
         "data_sha256": data_audit["sha256"],
     }
@@ -987,6 +1078,7 @@ def run_formal(
     metric_rows: list[dict[str, Any]] = []
     tuning_rows: list[dict[str, Any]] = []
     audit_rows: list[dict[str, Any]] = []
+    threshold_rows: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
     expected_counts: dict[tuple[int, int, str], int] = {}
     try:
@@ -997,6 +1089,7 @@ def run_formal(
                     horizon=horizon,
                     lookback=lookback,
                     external_lag=int(config["feature_set"]["external_lag"]),
+                    feature_set=config["feature_set"]["name"],
                 )
                 splits = {
                     name: make_fixed_split(
@@ -1038,6 +1131,35 @@ def run_formal(
                             predictions, params, audit = run_fixed_setting(
                                 samples, split, config, best_params, seed, checkpoint
                             )
+                            selected_columns = list(audit.pop("selected_columns"))
+                            threshold_summary = dict(audit.pop("threshold_summary"))
+                            threshold_candidates = list(
+                                audit.pop("threshold_candidates")
+                            )
+                            for candidate_row in threshold_candidates:
+                                threshold_rows.append(
+                                    {
+                                        "model": model_name,
+                                        "feature_set": config["feature_set"]["name"],
+                                        "horizon": horizon,
+                                        "lookback": lookback,
+                                        "split_strategy": split_name,
+                                        "seed": seed,
+                                        "prediction_anchor_date": samples.metadata.iloc[
+                                            split.test_idx[0]
+                                        ]["anchor_date"],
+                                        "threshold_calibration_end_date": samples.metadata.iloc[
+                                            split.validation_idx[-1]
+                                        ]["target_date"],
+                                        "n_threshold_samples": len(
+                                            split.validation_idx
+                                        ),
+                                        "selected_threshold": threshold_summary[
+                                            "validation_selected_threshold"
+                                        ],
+                                        **candidate_row,
+                                    }
+                                )
                             metrics, enriched = evaluate_predictions(
                                 predictions,
                                 horizon,
@@ -1064,16 +1186,12 @@ def run_formal(
                                 "test_end": enriched["anchor_date"].max(),
                                 "n_predictions": len(enriched),
                                 "params": json.dumps(params, sort_keys=True),
+                                **threshold_summary,
                                 **metrics,
                             }
                             all_predictions.append(enriched)
                             metric_rows.append(metric_row)
-                            selected_columns = list(audit["selected_columns"])
-                            fold_audit = {
-                                key: value
-                                for key, value in audit.items()
-                                if key != "selected_columns"
-                            }
+                            fold_audit = dict(audit)
                             audit_rows.append(
                                 {
                                     "horizon": horizon,
@@ -1225,6 +1343,9 @@ def run_formal(
         metrics_frame.to_csv(result_root / "metrics.csv", index=False)
         pd.DataFrame(tuning_rows).to_csv(result_root / "tuning_results.csv", index=False)
         pd.DataFrame(audit_rows).to_csv(result_root / "fold_audit.csv", index=False)
+        pd.DataFrame(threshold_rows).to_csv(
+            result_root / "threshold_audit.csv", index=False
+        )
         failures_frame.to_csv(result_root / "model_failures.csv", index=False)
         coverage.to_csv(result_root / "coverage.csv", index=False)
         seed_stability.to_csv(result_root / "seed_stability.csv", index=False)

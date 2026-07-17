@@ -1,0 +1,81 @@
+data:
+  csv_path: datasets/processed/corn_factors_daily_v1.csv
+  date_col: date
+  target_col: dce_corn_close
+  expected_sha256: 208C7428D2ED5401B7144C0589C4CD9DB0D965486BE5D30B048A999662F02DD6
+
+target:
+  type: future_price
+  horizons: [5, 10, 15, 20]
+
+lookback:
+  candidates: [5, 10, 15, 20, 30, 40, 60]
+
+feature_set:
+  name: full_safe
+  external_lag: 0
+  max_training_missing_rate: 0.5
+
+split:
+  strategies:
+    chronological_811:
+      ratios: [0.8, 0.1, 0.1]
+      refit_with_validation: false
+      refit_during_test: false
+    chronological_712:
+      ratios: [0.7, 0.1, 0.2]
+      refit_with_validation: false
+      refit_during_test: false
+  purge: auto_horizon
+  embargo: auto_horizon
+  shuffle: false
+
+threshold_selection:
+  candidates: [0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.10]
+  metric: BalancedAccuracy
+  tie_break: [higher_mcc, closer_to_zero]
+  report_threshold_0: true
+  search_on_current_or_future_test: false
+
+preprocessing:
+  add_missing_indicators: true
+  preserve_lag_groups: false
+
+tuning:
+  method: grid_search
+  metric: RMSE
+  seed: 42
+  grid:
+    max_depth: [3, 6]
+    learning_rate: [0.03, 0.10]
+    min_child_weight: [1, 5]
+
+model:
+  name: xgboost
+  class_name: XGBoostPriceRegressor
+  source_version: "3.2.0"
+  license: Apache-2.0
+  fixed_params:
+    objective: reg:squarederror
+    eval_metric: rmse
+    n_estimators: 1000
+    early_stopping_rounds: 50
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_alpha: 0.0
+    reg_lambda: 1.0
+    tree_method: hist
+    device: cuda
+    n_jobs: -1
+
+formal:
+  seeds: [42]
+
+evaluation:
+  transaction_cost_bps: [0, 2, 5, 10]
+  overlapping_economics: non_overlapping_sleeves
+
+run:
+  runner: zzm
+  dataset_name: corn_factors_daily_v1
+  model_name: xgboost
