@@ -1,0 +1,80 @@
+data:
+  csv_path: datasets/processed/corn_factors_daily_v1.csv
+  date_col: date
+  target_col: dce_corn_close
+  expected_sha256: 208C7428D2ED5401B7144C0589C4CD9DB0D965486BE5D30B048A999662F02DD6
+
+target:
+  type: future_price
+  horizons: [5, 10, 15, 20]
+
+lookback:
+  candidates: [5, 10, 15, 20]
+
+feature_set:
+  name: all_except_date
+  external_lag: 0
+  max_training_missing_rate: 0.5
+
+split:
+  strategies:
+    chronological_712:
+      ratios: [0.70, 0.10, 0.20]
+      refit_with_validation: false
+      refit_during_test: false
+  purge: target_date
+  additional_embargo: 0
+  shuffle: false
+
+threshold_selection:
+  candidates: [-0.02, -0.01, 0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.10]
+  metric: BalancedAccuracy
+  tie_break: [higher_mcc, closer_to_zero]
+  report_threshold_0: true
+  search_on_current_or_future_test: false
+
+preprocessing:
+  add_missing_indicators: false
+  preserve_lag_groups: false
+
+tuning:
+  method: fixed
+  metric: RMSE
+  seed: 42
+  grid: {}
+
+model:
+  name: xgboost
+  class_name: XGBoostPriceRegressor
+  source_version: "3.2.0"
+  license: Apache-2.0
+  fixed_params:
+    n_estimators: 100
+    max_depth: 3
+    learning_rate: 0.05
+    subsample: 0.85
+    colsample_bytree: 0.80
+    min_child_weight: 5
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+    objective: reg:squarederror
+    eval_metric: rmse
+    tree_method: hist
+    random_state: 42
+    n_jobs: 4
+    verbosity: 0
+
+formal:
+  seeds: [42]
+
+evaluation:
+  transaction_cost_bps: [0, 2, 5, 10]
+  overlapping_economics: non_overlapping_sleeves
+
+run:
+  runner: zzm
+  dataset_name: corn_factors_daily_v1
+  model_name: xgboost_chatgpt_repro
+  noncanonical_reason:
+    - all_except_date bypasses full_safe publication-time lags
+    - additional_embargo is zero instead of horizon
