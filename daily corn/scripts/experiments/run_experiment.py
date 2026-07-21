@@ -29,8 +29,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from models.machine_learning.RandomForest import RandomForestPriceRegressor
-from models.machine_learning.XGBoost import XGBoostPriceRegressor
 from scripts.data_processing.data_pipeline import (
     FixedSplit,
     FoldPreprocessor,
@@ -42,6 +40,11 @@ from scripts.data_processing.data_pipeline import (
     make_fixed_split,
 )
 from scripts.evaluation.evaluate import evaluate_predictions, select_trend_threshold
+from scripts.experiments.model_registry import (
+    model_dependency_manifest,
+    model_spec,
+    resolve_model_class,
+)
 
 
 class ExperimentContractError(RuntimeError):
@@ -324,40 +327,44 @@ def build_model(
     seed: int,
     lookback: int,
 ) -> Any:
+    validate_sequence_preprocessing(config)
     params = _model_params(config, candidate, seed)
     class_name = config["model"]["class_name"]
-    if class_name == "RandomForestPriceRegressor":
-        return RandomForestPriceRegressor(**params)
-    if class_name == "LSTMPriceRegressor":
-        from models.deep_learning.LSTM import LSTMPriceRegressor
-
+    if model_spec(class_name).sequence:
         params["lookback"] = int(lookback)
-        return LSTMPriceRegressor(**params)
-    if class_name == "XGBoostPriceRegressor":
-        return XGBoostPriceRegressor(**params)
-    raise ValueError(f"Unsupported model class: {class_name}")
+    return resolve_model_class(class_name)(**params)
 
 
 def _expected_model_class(class_name: str) -> type:
-    if class_name == "RandomForestPriceRegressor":
-        return RandomForestPriceRegressor
-    if class_name == "XGBoostPriceRegressor":
-        return XGBoostPriceRegressor
-    if class_name == "LSTMPriceRegressor":
-        from models.deep_learning.LSTM import LSTMPriceRegressor
-
-        return LSTMPriceRegressor
-    raise ValueError(f"Unsupported model class: {class_name}")
+    return resolve_model_class(class_name)
 
 
 def validate_model_runtime(config: dict[str, Any]) -> None:
     if config["model"]["class_name"] != "XGBoostPriceRegressor":
         return
     expected = str(config["model"]["source_version"])
-    actual = XGBoostPriceRegressor.runtime_version
+    dependency = model_dependency_manifest("XGBoostPriceRegressor")
+    if dependency is None:
+        raise RuntimeError("XGBoost dependency metadata is unavailable")
+    actual = dependency["version"]
     if actual != expected:
         raise RuntimeError(
             f"XGBoost runtime version {actual} does not match config {expected}"
+        )
+
+
+def validate_sequence_preprocessing(config: dict[str, Any]) -> None:
+    class_name = config["model"]["class_name"]
+    if not model_spec(class_name).sequence:
+        return
+    preprocessing = config.get("preprocessing", {})
+    if (
+        preprocessing.get("add_missing_indicators") is not False
+        or preprocessing.get("preserve_lag_groups") is not True
+    ):
+        raise ValueError(
+            "Sequence models require preprocessing.add_missing_indicators=False "
+            "and preprocessing.preserve_lag_groups=True so flattened windows remain aligned"
         )
 
 
@@ -378,6 +385,7 @@ def _prepare_fold(
     evaluation_idx: np.ndarray,
     config: dict[str, Any],
 ) -> tuple[FoldPreprocessor, np.ndarray, np.ndarray]:
+    validate_sequence_preprocessing(config)
     preprocessing = config.get("preprocessing", {})
     preprocessor = FoldPreprocessor(
         max_missing_rate=float(config["feature_set"]["max_training_missing_rate"]),
@@ -396,18 +404,20 @@ def tune_parameters(
     split: FixedSplit,
     config: dict[str, Any],
     split_name: str,
+    seed: int | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     preprocessor, X_train, X_validation = _prepare_fold(
         samples, split.train_idx, split.validation_idx, config
     )
     y_train = samples.y.iloc[split.train_idx].to_numpy(dtype=float)
     y_validation = samples.y.iloc[split.validation_idx].to_numpy(dtype=float)
+    tuning_seed = int(config["tuning"].get("seed", 42) if seed is None else seed)
     results: list[dict[str, Any]] = []
     for candidate in make_parameter_grid(config["tuning"]["grid"]):
         model = build_model(
             config,
             candidate,
-            int(config["tuning"]["seed"]),
+            tuning_seed,
             _sample_lookback(samples),
         ).fit(X_train, y_train, validation_data=(X_validation, y_validation))
         predicted = model.predict(X_validation)
@@ -415,6 +425,7 @@ def tune_parameters(
         results.append(
             {
                 "split_tuning_skeleton": split_name,
+                "seed": tuning_seed,
                 "validation_rmse": rmse,
                 "selected_feature_count": len(preprocessor.selected_columns),
                 "best_epoch": getattr(model, "best_epoch_", None),
@@ -427,6 +438,57 @@ def tune_parameters(
     if best.get("best_epoch") is not None:
         selected["max_epochs"] = int(best["best_epoch"])
     return selected, results
+
+
+def build_parameter_plan(
+    samples: SupervisedSamples | None,
+    splits: dict[str, FixedSplit],
+    config: dict[str, Any],
+    strategy_names: list[str],
+) -> tuple[dict[int, dict[str, dict[str, Any]]], list[dict[str, Any]]]:
+    seeds = [int(seed) for seed in config["formal"]["seeds"]]
+    if config["tuning"].get("method") == "fixed":
+        selection_seed = int(config["tuning"].get("selection_seed", 42))
+        if selection_seed not in seeds:
+            raise ValueError("Fixed-parameter selection_seed must be a formal seed")
+        plan = {
+            seed: {strategy: {} for strategy in strategy_names}
+            for seed in seeds
+        }
+        rows = [
+            {
+                "split_tuning_skeleton": strategy,
+                "seed": selection_seed,
+                "selection_mode": "fixed_by_codex",
+                "validation_rmse": None,
+            }
+            for strategy in strategy_names
+        ]
+        return plan, rows
+    if samples is None:
+        raise ValueError("Supervised samples are required for parameter tuning")
+    plan: dict[int, dict[str, dict[str, Any]]] = {}
+    rows: list[dict[str, Any]] = []
+    for seed in seeds:
+        by_strategy: dict[str, dict[str, Any]] = {}
+        for strategy in strategy_names:
+            best, tuning_rows = tune_parameters(
+                samples, splits[strategy], config, strategy, seed=seed
+            )
+            by_strategy[strategy] = best
+            rows.extend(tuning_rows)
+        plan[seed] = by_strategy
+    return plan, rows
+
+
+def model_fit_validation_data(
+    config: dict[str, Any],
+    X_validation: np.ndarray,
+    y_validation: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    if config["tuning"].get("method") == "fixed":
+        return None
+    return X_validation, y_validation
 
 
 def _prediction_frame(
@@ -470,7 +532,9 @@ def run_fixed_setting(
     ).fit(
         X_train,
         y_train,
-        validation_data=(X_validation, y_validation),
+        validation_data=model_fit_validation_data(
+            config, X_validation, y_validation
+        ),
     )
     params = dict(model.params)
     validation_predicted = model.predict(X_validation)
@@ -704,7 +768,71 @@ def _data_audit(frame: pd.DataFrame, data_path: Path) -> dict[str, Any]:
     }
 
 
+def make_preflight_model_config(
+    config: dict[str, Any], candidate: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Reduce expensive parameters without adding parameters a model does not support."""
+    smoke_config = deepcopy(config)
+    smoke_candidate = dict(candidate)
+    limits = {
+        "n_estimators": 10,
+        "iterations": 10,
+        "max_epochs": 2,
+        "patience": 2,
+        "early_stopping_rounds": 3,
+    }
+    fixed_params = smoke_config["model"]["fixed_params"]
+    for name, limit in limits.items():
+        if name in fixed_params:
+            fixed_params[name] = min(int(fixed_params[name]), limit)
+        if name in smoke_candidate:
+            smoke_candidate[name] = min(int(smoke_candidate[name]), limit)
+    return smoke_config, smoke_candidate
+
+
+def benchmark_grid_fits(
+    config: dict[str, Any],
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_validation: np.ndarray,
+    y_validation: np.ndarray,
+    lookback: int,
+) -> tuple[float, int | None, float]:
+    """Benchmark every reduced grid candidate and return the slowest fit."""
+    durations: list[float] = []
+    effective_epochs: list[int] = []
+    epoch_scales: list[float] = []
+    validation_data = (X_validation, y_validation)
+    for candidate in make_parameter_grid(config["tuning"]["grid"]):
+        benchmark_config, benchmark_candidate = make_preflight_model_config(
+            config, candidate
+        )
+        original_params = dict(config["model"]["fixed_params"])
+        original_params.update(candidate)
+        reduced_params = dict(benchmark_config["model"]["fixed_params"])
+        reduced_params.update(benchmark_candidate)
+        if "max_epochs" in reduced_params:
+            reduced_epoch_count = int(reduced_params["max_epochs"])
+            effective_epochs.append(reduced_epoch_count)
+            epoch_scales.append(
+                int(original_params["max_epochs"]) / reduced_epoch_count
+            )
+        started = time.perf_counter()
+        build_model(
+            benchmark_config, benchmark_candidate, 42, lookback
+        ).fit(X_train, y_train, validation_data=validation_data)
+        durations.append(time.perf_counter() - started)
+    if not durations:
+        raise ValueError("Cannot benchmark an empty parameter grid")
+    return (
+        max(durations),
+        max(effective_epochs) if effective_epochs else None,
+        max(epoch_scales) if epoch_scales else 1.0,
+    )
+
+
 def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> dict[str, Any]:
+    validate_sequence_preprocessing(config)
     validate_model_runtime(config)
     strategy_plan = resolve_strategy_plan(config)
     data_path = project_root / config["data"]["csv_path"]
@@ -730,15 +858,7 @@ def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> 
     )
     grid_candidates = make_parameter_grid(config["tuning"]["grid"])
     candidate = dict(grid_candidates[0])
-    smoke_config = deepcopy(config)
-    if config["model"]["class_name"] == "RandomForestPriceRegressor":
-        candidate["n_estimators"] = min(int(candidate["n_estimators"]), 10)
-    elif config["model"]["class_name"] == "XGBoostPriceRegressor":
-        smoke_config["model"]["fixed_params"]["n_estimators"] = 10
-        smoke_config["model"]["fixed_params"]["early_stopping_rounds"] = 3
-    else:
-        smoke_config["model"]["fixed_params"]["max_epochs"] = 2
-        smoke_config["model"]["fixed_params"]["patience"] = 2
+    smoke_config, candidate = make_preflight_model_config(config, candidate)
     with tempfile.TemporaryDirectory() as temporary_directory:
         checkpoint = Path(temporary_directory) / "smoke.joblib"
         predictions, _, _ = run_fixed_setting(
@@ -774,49 +894,35 @@ def run_preflight(config: dict[str, Any], project_root: Path = PROJECT_ROOT) -> 
         transaction_cost_bps=config["evaluation"]["transaction_cost_bps"],
     )
 
-    benchmark_candidate = dict(grid_candidates[-1])
-    benchmark_config = deepcopy(config)
-    benchmark_epochs = None
-    epoch_scale = 1.0
-    if config["model"]["class_name"] == "LSTMPriceRegressor":
-        benchmark_epochs = min(
-            5, int(config["model"]["fixed_params"]["max_epochs"])
-        )
-        benchmark_config["model"]["fixed_params"]["max_epochs"] = benchmark_epochs
-        benchmark_config["model"]["fixed_params"]["patience"] = benchmark_epochs
-        epoch_scale = (
-            int(config["model"]["fixed_params"]["max_epochs"])
-            / benchmark_epochs
-        )
     benchmark_indices = split.train_idx
     preprocessor, X_train, X_validation = _prepare_fold(
         samples,
         benchmark_indices,
         split.validation_idx,
-        benchmark_config,
+        config,
     )
     del preprocessor
-    validation_data = None
-    if config["model"]["class_name"] == "XGBoostPriceRegressor":
-        validation_data = (
-            X_validation,
-            samples.y.iloc[split.validation_idx].to_numpy(dtype=float),
-        )
-    started = time.perf_counter()
-    build_model(
-        benchmark_config, benchmark_candidate, 42, lookback
-    ).fit(
+    benchmark_seconds, benchmark_epochs, epoch_scale = benchmark_grid_fits(
+        config,
         X_train,
         samples.y.iloc[benchmark_indices].to_numpy(dtype=float),
-        validation_data=validation_data,
+        X_validation,
+        samples.y.iloc[split.validation_idx].to_numpy(dtype=float),
+        lookback,
     )
-    benchmark_seconds = time.perf_counter() - started
 
     grid_size = len(make_parameter_grid(config["tuning"]["grid"]))
     combinations = len(config["target"]["horizons"]) * len(
         config["lookback"]["candidates"]
     )
-    tuning_fits = combinations * len(strategy_plan["tuning"]) * grid_size
+    tuning_fits = 0
+    if config["tuning"].get("method") != "fixed":
+        tuning_fits = (
+            combinations
+            * len(strategy_plan["tuning"])
+            * grid_size
+            * len(config["formal"]["seeds"])
+        )
     fixed_fits = (
         combinations
         * len(strategy_plan["fixed"])
@@ -1022,6 +1128,7 @@ def run_formal(
     project_root: Path = PROJECT_ROOT,
     source_commit: str | None = None,
 ) -> dict[str, Any]:
+    validate_sequence_preprocessing(config)
     validate_model_runtime(config)
     strategy_plan = resolve_strategy_plan(config)
     runner = config["run"]["runner"]
@@ -1050,6 +1157,9 @@ def run_formal(
     (result_root / "config_resolved.yaml").write_text(
         yaml.safe_dump(resolved, sort_keys=False, allow_unicode=True), encoding="utf-8"
     )
+    class_name = config["model"]["class_name"]
+    model_class = _expected_model_class(class_name)
+    dependency = model_dependency_manifest(class_name)
     manifest = {
         "run_id": run_id,
         "status": "RUNNING",
@@ -1060,15 +1170,16 @@ def run_formal(
         "scikit_learn": sklearn.__version__,
         "torch": (
             torch.__version__
-            if config["model"]["class_name"] == "LSTMPriceRegressor" and torch is not None
+            if model_spec(class_name).sequence and torch is not None
             else None
         ),
         "xgboost": (
-            XGBoostPriceRegressor.runtime_version
-            if config["model"]["class_name"] == "XGBoostPriceRegressor"
+            dependency["version"]
+            if dependency is not None and dependency["name"] == "xgboost"
             else None
         ),
-        "model_source": _expected_model_class(config["model"]["class_name"]).source,
+        "model_dependency": dependency,
+        "model_source": model_class.source,
         "source_commit": source_commit,
         "data_sha256": data_audit["sha256"],
     }
@@ -1097,29 +1208,26 @@ def run_formal(
                     )
                     for name in strategy_plan["tuning"]
                 }
-                best_by_strategy: dict[str, dict[str, Any]] = {}
-                for split_name in strategy_plan["tuning"]:
-                    best_params, split_tuning_rows = tune_parameters(
-                        samples, splits[split_name], config, split_name
+                best_by_seed_strategy, parameter_rows = build_parameter_plan(
+                    samples, splits, config, strategy_plan["tuning"]
+                )
+                for row in parameter_rows:
+                    tuning_rows.append(
+                        {"horizon": horizon, "lookback": lookback, **row}
                     )
-                    best_by_strategy[split_name] = best_params
-                    for row in split_tuning_rows:
-                        tuning_rows.append(
-                            {"horizon": horizon, "lookback": lookback, **row}
-                        )
 
-                settings = [
-                    (split_name, splits[split_name], best_by_strategy[split_name])
-                    for split_name in strategy_plan["fixed"]
-                ]
-                for split_name, split, _ in settings:
-                    expected_counts[(horizon, lookback, split_name)] = len(split.test_idx)
+                for split_name in strategy_plan["fixed"]:
+                    expected_counts[(horizon, lookback, split_name)] = len(
+                        splits[split_name].test_idx
+                    )
                 if strategy_plan["run_expanding"]:
                     expected_counts[(horizon, lookback, EXPANDING_STRATEGY)] = len(
                         splits["chronological_712"].test_idx
                     )
-                for split_name, split, best_params in settings:
+                for split_name in strategy_plan["fixed"]:
+                    split = splits[split_name]
                     for seed in config["formal"]["seeds"]:
+                        best_params = best_by_seed_strategy[int(seed)][split_name]
                         try:
                             checkpoint = (
                                 checkpoint_root
@@ -1227,7 +1335,6 @@ def run_formal(
 
                 if strategy_plan["run_expanding"]:
                     expanding_split = splits["chronological_712"]
-                    expanding_params = best_by_strategy["chronological_712"]
                 expanding_seeds = (
                     config["formal"]["seeds"]
                     if strategy_plan["run_expanding"]
@@ -1235,6 +1342,7 @@ def run_formal(
                 )
                 for seed in expanding_seeds:
                     split_name = "expanding_rolling_backtest"
+                    expanding_params = best_by_seed_strategy[int(seed)]["chronological_712"]
                     try:
                         checkpoint = (
                             checkpoint_root

@@ -1,0 +1,22 @@
+{
+  "run_id": "2026-07-20-19-23-19-zzm",
+  "status": "COMPLETED",
+  "runner": "zzm",
+  "started_at": "2026-07-20T19:23:19.386948",
+  "operating_system": "Linux-5.15.0-101-generic-x86_64-with-glibc2.35",
+  "python": "3.11.15 (main, Jun 11 2026, 15:20:16) [GCC 14.3.0]",
+  "scikit_learn": "1.7.2",
+  "torch": "2.12.1+cu130",
+  "xgboost": null,
+  "model_dependency": null,
+  "model_source": "https://github.com/cure-lab/LTSF-Linear",
+  "source_commit": null,
+  "data_sha256": "2B66E514EABFD598455F7D552074171EABF91327EE043DC0D61A6DFB7DEE1813",
+  "finished_at": "2026-07-20T19:25:14.581315",
+  "n_predictions": 22488,
+  "n_metric_rows": 48,
+  "n_failures": 0,
+  "results_path": "results/corn_feitian_daily_factors_v2/dlinear/2026-07-20-19-23-19-zzm",
+  "checkpoints_path": "checkpoints/corn_feitian_daily_factors_v2/dlinear/2026-07-20-19-23-19-zzm",
+  "report_path": "report/corn_feitian_daily_factors_v2/dlinear/2026-07-20-19-23-19-zzm"
+}
