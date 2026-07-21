@@ -1,0 +1,22 @@
+{
+  "run_id": "2026-07-20-16-27-20-model-catalog-autodl",
+  "status": "COMPLETED",
+  "runner": "model-catalog-autodl",
+  "started_at": "2026-07-20T16:27:20.545315",
+  "operating_system": "Linux-5.15.0-101-generic-x86_64-with-glibc2.35",
+  "python": "3.11.15 (main, Jun 11 2026, 15:20:16) [GCC 14.3.0]",
+  "scikit_learn": "1.7.2",
+  "torch": null,
+  "xgboost": null,
+  "model_dependency": null,
+  "model_source": "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html",
+  "source_commit": null,
+  "data_sha256": "B4AF1E478F69FE4BE55C29B5147CA7794CC06BC30823F7A57AE1E5D7DFD98191",
+  "finished_at": "2026-07-20T16:31:17.498662",
+  "n_predictions": 22488,
+  "n_metric_rows": 48,
+  "n_failures": 0,
+  "results_path": "results/corn_factors_daily_v2/random_forest/2026-07-20-16-27-20-model-catalog-autodl",
+  "checkpoints_path": "checkpoints/corn_factors_daily_v2/random_forest/2026-07-20-16-27-20-model-catalog-autodl",
+  "report_path": "report/corn_factors_daily_v2/random_forest/2026-07-20-16-27-20-model-catalog-autodl"
+}

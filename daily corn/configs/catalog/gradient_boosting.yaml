@@ -1,0 +1,10 @@
+data: {csv_path: datasets/processed/corn_factors_daily_v2.csv, date_col: date, target_col: dce_corn_close, expected_sha256: B4AF1E478F69FE4BE55C29B5147CA7794CC06BC30823F7A57AE1E5D7DFD98191}
+target: {type: future_price, horizons: [5, 10, 15, 20]}
+lookback: {candidates: [5, 10, 15, 20]}
+feature_set: {name: full_safe, external_lag: 0, max_training_missing_rate: 0.5}
+split: {strategies: {chronological_712: {ratios: [0.7, 0.1, 0.2]}}, purge: auto_horizon, embargo: auto_horizon, shuffle: false}
+tuning: {method: fixed, metric: RMSE, selection_seed: 42, grid: {}}
+model: {name: gradient_boosting, class_name: GradientBoostingPriceRegressor, fixed_params: {n_estimators: 300, max_depth: 2, learning_rate: 0.03, loss: squared_error}}
+formal: {seeds: [42, 2024, 3407]}
+evaluation: {transaction_cost_bps: [0, 2, 5, 10], overlapping_economics: non_overlapping_sleeves}
+run: {runner: model-catalog-autodl, dataset_name: corn_factors_daily_v2, model_name: gradient_boosting}

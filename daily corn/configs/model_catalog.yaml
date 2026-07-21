@@ -1,0 +1,26 @@
+datasets:
+  - name: corn_factors_daily_v2
+    csv_path: datasets/processed/corn_factors_daily_v2.csv
+    sha256: B4AF1E478F69FE4BE55C29B5147CA7794CC06BC30823F7A57AE1E5D7DFD98191
+  - name: corn_飞天_daily_factors_v2
+    csv_path: datasets/processed/corn_飞天_daily_factors_v2.csv
+    sha256: 2B66E514EABFD598455F7D552074171EABF91327EE043DC0D61A6DFB7DEE1813
+models:
+  - {name: random_forest, config: configs/catalog/random_forest.yaml}
+  - {name: xgboost, config: configs/catalog/xgboost.yaml}
+  - {name: lstm, config: configs/catalog/lstm.yaml}
+  - {name: svr, config: configs/catalog/svr.yaml}
+  - {name: knn, config: configs/catalog/knn.yaml}
+  - {name: gradient_boosting, config: configs/catalog/gradient_boosting.yaml}
+  - {name: lightgbm, config: configs/catalog/lightgbm.yaml}
+  - {name: catboost, config: configs/catalog/catboost.yaml}
+  - {name: rnn, config: configs/catalog/rnn.yaml}
+  - {name: lnn, config: configs/catalog/lnn.yaml}
+  - {name: simpletm, config: configs/catalog/simpletm.yaml}
+  - {name: tcn, config: configs/catalog/tcn.yaml}
+  - {name: raft, config: configs/catalog/raft.yaml}
+  - {name: mafs, config: configs/catalog/mafs.yaml}
+  - {name: dlinear, config: configs/catalog/dlinear.yaml}
+  - {name: xlinear, config: configs/catalog/xlinear.yaml}
+  - {name: patchtst, config: configs/catalog/patchtst.yaml}
+  - {name: itransformer, config: configs/catalog/itransformer.yaml}

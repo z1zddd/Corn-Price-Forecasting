@@ -1,0 +1,2 @@
+train_start_date,train_end_date,train_max_target_date,validation_start_date,validation_end_date,test_start_date,test_end_date,prediction_anchor_date,prediction_target_date,n_train,n_predictions,fixed_split_threshold_source,threshold_calibration_max_target_date,n_threshold_samples,selected_feature_count,selected_columns_hash
+2016-07-05,2023-06-02,2023-07-04,2023-07-05,2024-05-31,2024-07-02,2026-05-28,2024-07-02,2024-07-30,1681,461,validation,2024-07-01,220,160,eaf28197372777168130e2f1ccd4f5d85289cb73d85ac924a17518b5834c89f6

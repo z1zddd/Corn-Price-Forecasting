@@ -1,0 +1,25 @@
+{
+  "run_id": "2026-07-21-12-17-24-model-catalog-autodl",
+  "status": "COMPLETED",
+  "runner": "model-catalog-autodl",
+  "started_at": "2026-07-21T12:17:24.950365",
+  "operating_system": "Linux-5.15.0-101-generic-x86_64-with-glibc2.35",
+  "python": "3.11.15 (main, Jun 11 2026, 15:20:16) [GCC 14.3.0]",
+  "scikit_learn": "1.7.2",
+  "torch": null,
+  "xgboost": null,
+  "model_dependency": {
+    "name": "catboost",
+    "version": "1.2.8"
+  },
+  "model_source": "https://github.com/catboost/catboost",
+  "source_commit": null,
+  "data_sha256": "2B66E514EABFD598455F7D552074171EABF91327EE043DC0D61A6DFB7DEE1813",
+  "finished_at": "2026-07-21T12:22:07.625645",
+  "n_predictions": 22488,
+  "n_metric_rows": 48,
+  "n_failures": 0,
+  "results_path": "results/corn_飞天_daily_factors_v2/catboost/2026-07-21-12-17-24-model-catalog-autodl",
+  "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/catboost/2026-07-21-12-17-24-model-catalog-autodl",
+  "report_path": "report/corn_飞天_daily_factors_v2/catboost/2026-07-21-12-17-24-model-catalog-autodl"
+}

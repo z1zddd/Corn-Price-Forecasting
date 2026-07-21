@@ -103,50 +103,19 @@ class MAFSNetwork(nn.Module):
 
 
 class DLinearNetwork(nn.Module):
-    """DLinear decomposition with a scalar future-price regression head."""
-
-    def __init__(
-        self,
-        lookback: int,
-        input_size: int,
-        kernel_size: int = 25,
-        individual: bool = False,
-    ) -> None:
+    def __init__(self, lookback: int, input_size: int) -> None:
         super().__init__()
-        if kernel_size <= 0 or kernel_size % 2 == 0:
-            raise ValueError("DLinear kernel_size must be a positive odd integer")
-        self.kernel_size = int(kernel_size)
-        self.individual = bool(individual)
-        self.input_size = int(input_size)
-        self.moving_average = nn.AvgPool1d(kernel_size=self.kernel_size, stride=1)
-        if self.individual:
-            self.trend = nn.ModuleList(nn.Linear(lookback, 1) for _ in range(input_size))
-            self.seasonal = nn.ModuleList(nn.Linear(lookback, 1) for _ in range(input_size))
-        else:
-            self.trend = nn.Linear(lookback, 1)
-            self.seasonal = nn.Linear(lookback, 1)
+        self.trend = nn.Linear(lookback, 1)
+        self.seasonal = nn.Linear(lookback, 1)
         self.output = nn.Linear(input_size * 2, 1)
 
-    def _decompose(self, values: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        transposed = values.transpose(1, 2)
-        padding = (self.kernel_size - 1) // 2
-        padded = torch.nn.functional.pad(transposed, (padding, padding), mode="replicate")
-        trend = self.moving_average(padded)
-        return transposed - trend, trend
-
-    def _project(self, values: torch.Tensor, layers: nn.Module) -> torch.Tensor:
-        if not self.individual:
-            return layers(values)
-        return torch.cat(
-            [layer(values[:, index, :]).unsqueeze(1) for index, layer in enumerate(layers)],
-            dim=1,
-        )
-
     def forward(self, values: torch.Tensor) -> torch.Tensor:
-        seasonal, trend = self._decompose(values)
-        combined = torch.cat(
-            (self._project(trend, self.trend), self._project(seasonal, self.seasonal)), dim=1
+        transposed = values.transpose(1, 2)
+        trend = torch.nn.functional.avg_pool1d(
+            transposed, kernel_size=3, stride=1, padding=1
         )
+        seasonal = transposed - trend
+        combined = torch.cat((self.trend(trend), self.seasonal(seasonal)), dim=1)
         return self.output(combined.squeeze(-1)).squeeze(-1)
 
 

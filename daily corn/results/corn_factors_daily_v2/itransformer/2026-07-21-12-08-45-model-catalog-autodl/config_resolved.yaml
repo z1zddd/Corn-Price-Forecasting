@@ -1,0 +1,69 @@
+data:
+  csv_path: datasets/processed/corn_factors_daily_v2.csv
+  date_col: date
+  target_col: dce_corn_close
+  expected_sha256: B4AF1E478F69FE4BE55C29B5147CA7794CC06BC30823F7A57AE1E5D7DFD98191
+target:
+  type: future_price
+  horizons:
+  - 5
+  - 10
+  - 15
+  - 20
+lookback:
+  candidates:
+  - 5
+  - 10
+  - 15
+  - 20
+feature_set:
+  name: full_safe
+  external_lag: 0
+  max_training_missing_rate: 0.5
+preprocessing:
+  add_missing_indicators: false
+  preserve_lag_groups: true
+split:
+  strategies:
+    chronological_712:
+      ratios:
+      - 0.7
+      - 0.1
+      - 0.2
+  purge: auto_horizon
+  embargo: auto_horizon
+  shuffle: false
+tuning:
+  method: fixed
+  metric: RMSE
+  selection_seed: 42
+  grid: {}
+model:
+  name: itransformer
+  class_name: ITransformerPriceRegressor
+  fixed_params:
+    hidden_size: 32
+    learning_rate: 0.001
+    weight_decay: 1.0e-05
+    batch_size: 64
+    max_epochs: 40
+    patience: 8
+    device: cuda
+formal:
+  seeds:
+  - 42
+  - 2024
+  - 3407
+evaluation:
+  transaction_cost_bps:
+  - 0
+  - 2
+  - 5
+  - 10
+  overlapping_economics: non_overlapping_sleeves
+run:
+  runner: model-catalog-autodl
+  dataset_name: corn_factors_daily_v2
+  model_name: itransformer
+  run_id: 2026-07-21-12-08-45-model-catalog-autodl
+  source_commit: null

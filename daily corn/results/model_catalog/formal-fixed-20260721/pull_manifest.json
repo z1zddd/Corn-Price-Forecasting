@@ -1,0 +1,329 @@
+{
+  "runs": [
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "random_forest",
+      "catalog_status": "SKIPPED_COMPLETED",
+      "run_id": "2026-07-20-16-27-20-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/random_forest/2026-07-20-16-27-20-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/random_forest/2026-07-20-16-27-20-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/random_forest/2026-07-20-16-27-20-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "xgboost",
+      "catalog_status": "SKIPPED_COMPLETED",
+      "run_id": "2026-07-20-16-31-17-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/xgboost/2026-07-20-16-31-17-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/xgboost/2026-07-20-16-31-17-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/xgboost/2026-07-20-16-31-17-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "lstm",
+      "catalog_status": "SKIPPED_COMPLETED",
+      "run_id": "2026-07-20-16-33-41-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/lstm/2026-07-20-16-33-41-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/lstm/2026-07-20-16-33-41-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/lstm/2026-07-20-16-33-41-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "svr",
+      "catalog_status": "SKIPPED_COMPLETED",
+      "run_id": "2026-07-20-16-38-22-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/svr/2026-07-20-16-38-22-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/svr/2026-07-20-16-38-22-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/svr/2026-07-20-16-38-22-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "knn",
+      "catalog_status": "SKIPPED_COMPLETED",
+      "run_id": "2026-07-20-16-44-44-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/knn/2026-07-20-16-44-44-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/knn/2026-07-20-16-44-44-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/knn/2026-07-20-16-44-44-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "dlinear",
+      "catalog_status": "SKIPPED_COMPLETED",
+      "run_id": "2026-07-20-19-21-00-zzm",
+      "results_path": "results/corn_factors_daily_v2/dlinear/2026-07-20-19-21-00-zzm",
+      "report_path": "report/corn_factors_daily_v2/dlinear/2026-07-20-19-21-00-zzm",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/dlinear/2026-07-20-19-21-00-zzm"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "lightgbm",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-29-40-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/lightgbm/2026-07-21-11-29-40-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/lightgbm/2026-07-21-11-29-40-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/lightgbm/2026-07-21-11-29-40-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "random_forest",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-34-12-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/random_forest/2026-07-21-11-34-12-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/random_forest/2026-07-21-11-34-12-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/random_forest/2026-07-21-11-34-12-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "svr",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-35-25-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/svr/2026-07-21-11-35-25-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/svr/2026-07-21-11-35-25-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/svr/2026-07-21-11-35-25-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "knn",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-36-15-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/knn/2026-07-21-11-36-15-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/knn/2026-07-21-11-36-15-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/knn/2026-07-21-11-36-15-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "catboost",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-29-40-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/catboost/2026-07-21-11-29-40-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/catboost/2026-07-21-11-29-40-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/catboost/2026-07-21-11-29-40-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "rnn",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-38-39-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/rnn/2026-07-21-11-38-39-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/rnn/2026-07-21-11-38-39-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/rnn/2026-07-21-11-38-39-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "lnn",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-41-08-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/lnn/2026-07-21-11-41-08-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/lnn/2026-07-21-11-41-08-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/lnn/2026-07-21-11-41-08-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "gradient_boosting",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-36-37-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/gradient_boosting/2026-07-21-11-36-37-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/gradient_boosting/2026-07-21-11-36-37-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/gradient_boosting/2026-07-21-11-36-37-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "simpletm",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-50-28-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/simpletm/2026-07-21-11-50-28-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/simpletm/2026-07-21-11-50-28-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/simpletm/2026-07-21-11-50-28-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "lightgbm",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-53-50-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/lightgbm/2026-07-21-11-53-50-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/lightgbm/2026-07-21-11-53-50-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/lightgbm/2026-07-21-11-53-50-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "tcn",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-54-16-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/tcn/2026-07-21-11-54-16-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/tcn/2026-07-21-11-54-16-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/tcn/2026-07-21-11-54-16-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "raft",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-56-57-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/raft/2026-07-21-11-56-57-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/raft/2026-07-21-11-56-57-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/raft/2026-07-21-11-56-57-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "mafs",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-59-31-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/mafs/2026-07-21-11-59-31-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/mafs/2026-07-21-11-59-31-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/mafs/2026-07-21-11-59-31-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "xlinear",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-02-51-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/xlinear/2026-07-21-12-02-51-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/xlinear/2026-07-21-12-02-51-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/xlinear/2026-07-21-12-02-51-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "patchtst",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-04-54-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/patchtst/2026-07-21-12-04-54-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/patchtst/2026-07-21-12-04-54-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/patchtst/2026-07-21-12-04-54-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "itransformer",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-08-45-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/itransformer/2026-07-21-12-08-45-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/itransformer/2026-07-21-12-08-45-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/itransformer/2026-07-21-12-08-45-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "xgboost",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-12-47-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/xgboost/2026-07-21-12-12-47-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/xgboost/2026-07-21-12-12-47-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/xgboost/2026-07-21-12-12-47-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "lstm",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-14-53-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/lstm/2026-07-21-12-14-53-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/lstm/2026-07-21-12-14-53-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/lstm/2026-07-21-12-14-53-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "catboost",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-17-24-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/catboost/2026-07-21-12-17-24-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/catboost/2026-07-21-12-17-24-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/catboost/2026-07-21-12-17-24-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "rnn",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-22-07-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/rnn/2026-07-21-12-22-07-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/rnn/2026-07-21-12-22-07-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/rnn/2026-07-21-12-22-07-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "lnn",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-24-22-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/lnn/2026-07-21-12-24-22-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/lnn/2026-07-21-12-24-22-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/lnn/2026-07-21-12-24-22-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "simpletm",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-33-12-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/simpletm/2026-07-21-12-33-12-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/simpletm/2026-07-21-12-33-12-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/simpletm/2026-07-21-12-33-12-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "tcn",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-36-46-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/tcn/2026-07-21-12-36-46-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/tcn/2026-07-21-12-36-46-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/tcn/2026-07-21-12-36-46-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "raft",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-38-49-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/raft/2026-07-21-12-38-49-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/raft/2026-07-21-12-38-49-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/raft/2026-07-21-12-38-49-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_factors_daily_v2",
+      "model_name": "gradient_boosting",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-11-29-40-model-catalog-autodl",
+      "results_path": "results/corn_factors_daily_v2/gradient_boosting/2026-07-21-11-29-40-model-catalog-autodl",
+      "report_path": "report/corn_factors_daily_v2/gradient_boosting/2026-07-21-11-29-40-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_factors_daily_v2/gradient_boosting/2026-07-21-11-29-40-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "mafs",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-41-05-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/mafs/2026-07-21-12-41-05-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/mafs/2026-07-21-12-41-05-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/mafs/2026-07-21-12-41-05-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "dlinear",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-44-06-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/dlinear/2026-07-21-12-44-06-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/dlinear/2026-07-21-12-44-06-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/dlinear/2026-07-21-12-44-06-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "xlinear",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-46-02-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/xlinear/2026-07-21-12-46-02-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/xlinear/2026-07-21-12-46-02-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/xlinear/2026-07-21-12-46-02-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "patchtst",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-47-42-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/patchtst/2026-07-21-12-47-42-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/patchtst/2026-07-21-12-47-42-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/patchtst/2026-07-21-12-47-42-model-catalog-autodl"
+    },
+    {
+      "dataset_name": "corn_飞天_daily_factors_v2",
+      "model_name": "itransformer",
+      "catalog_status": "PASS",
+      "run_id": "2026-07-21-12-51-16-model-catalog-autodl",
+      "results_path": "results/corn_飞天_daily_factors_v2/itransformer/2026-07-21-12-51-16-model-catalog-autodl",
+      "report_path": "report/corn_飞天_daily_factors_v2/itransformer/2026-07-21-12-51-16-model-catalog-autodl",
+      "checkpoints_path": "checkpoints/corn_飞天_daily_factors_v2/itransformer/2026-07-21-12-51-16-model-catalog-autodl"
+    }
+  ],
+  "missing_paths": []
+}

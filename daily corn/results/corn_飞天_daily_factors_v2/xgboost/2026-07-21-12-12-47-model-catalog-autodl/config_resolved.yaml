@@ -1,0 +1,73 @@
+data:
+  csv_path: datasets/processed/corn_飞天_daily_factors_v2.csv
+  date_col: date
+  target_col: dce_corn_close
+  expected_sha256: 2B66E514EABFD598455F7D552074171EABF91327EE043DC0D61A6DFB7DEE1813
+target:
+  type: future_price
+  horizons:
+  - 5
+  - 10
+  - 15
+  - 20
+lookback:
+  candidates:
+  - 5
+  - 10
+  - 15
+  - 20
+feature_set:
+  name: full_safe
+  external_lag: 0
+  max_training_missing_rate: 0.5
+split:
+  strategies:
+    chronological_712:
+      ratios:
+      - 0.7
+      - 0.1
+      - 0.2
+      refit_with_validation: false
+      refit_during_test: false
+  purge: auto_horizon
+  embargo: auto_horizon
+  shuffle: false
+tuning:
+  method: fixed
+  metric: RMSE
+  selection_seed: 42
+  grid: {}
+model:
+  name: xgboost
+  class_name: XGBoostPriceRegressor
+  source_version: 3.2.0
+  license: Apache-2.0
+  fixed_params:
+    objective: reg:squarederror
+    eval_metric: rmse
+    n_estimators: 1200
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    tree_method: hist
+    device: cuda
+    n_jobs: -1
+formal:
+  seeds:
+  - 42
+  - 2024
+  - 3407
+evaluation:
+  transaction_cost_bps:
+  - 0
+  - 2
+  - 5
+  - 10
+  overlapping_economics: non_overlapping_sleeves
+run:
+  runner: model-catalog-autodl
+  dataset_name: corn_飞天_daily_factors_v2
+  model_name: xgboost
+  run_id: 2026-07-21-12-12-47-model-catalog-autodl
+  source_commit: null

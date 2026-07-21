@@ -1,0 +1,22 @@
+{
+  "run_id": "2026-07-21-12-08-45-model-catalog-autodl",
+  "status": "COMPLETED",
+  "runner": "model-catalog-autodl",
+  "started_at": "2026-07-21T12:08:45.133703",
+  "operating_system": "Linux-5.15.0-101-generic-x86_64-with-glibc2.35",
+  "python": "3.11.15 (main, Jun 11 2026, 15:20:16) [GCC 14.3.0]",
+  "scikit_learn": "1.7.2",
+  "torch": "2.12.1+cu130",
+  "xgboost": null,
+  "model_dependency": null,
+  "model_source": "https://github.com/thuml/iTransformer",
+  "source_commit": null,
+  "data_sha256": "B4AF1E478F69FE4BE55C29B5147CA7794CC06BC30823F7A57AE1E5D7DFD98191",
+  "finished_at": "2026-07-21T12:12:47.252821",
+  "n_predictions": 22488,
+  "n_metric_rows": 48,
+  "n_failures": 0,
+  "results_path": "results/corn_factors_daily_v2/itransformer/2026-07-21-12-08-45-model-catalog-autodl",
+  "checkpoints_path": "checkpoints/corn_factors_daily_v2/itransformer/2026-07-21-12-08-45-model-catalog-autodl",
+  "report_path": "report/corn_factors_daily_v2/itransformer/2026-07-21-12-08-45-model-catalog-autodl"
+}

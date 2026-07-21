@@ -1,0 +1,23 @@
+{
+  "path": "datasets/processed/corn_飞天_daily_factors_v2.csv",
+  "sha256": "2B66E514EABFD598455F7D552074171EABF91327EE043DC0D61A6DFB7DEE1813",
+  "rows": 2426,
+  "columns": 33,
+  "date_min": "2016-06-29T00:00:00",
+  "date_max": "2026-06-26T00:00:00",
+  "duplicate_dates": 0,
+  "target_missing": 0,
+  "rows_with_any_missing": 165,
+  "missing_by_column": {
+    "product__corn_husk": 127,
+    "product__protein_powder": 127,
+    "corn_spot_momentum_5d": 13,
+    "corn_spot_momentum_20d": 28,
+    "corn_regional_dispersion": 12,
+    "starch_corn_spread_ratio": 4,
+    "starch_corn_spread_change_5d": 13,
+    "byproduct_momentum_5d": 132,
+    "byproduct_momentum_20d": 147,
+    "processing_chain_momentum_20d": 22
+  }
+}
